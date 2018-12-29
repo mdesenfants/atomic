@@ -72,5 +72,51 @@
     });
   }
 </script>
+<script>
+  window.fbAsyncInit = function () {
+    FB.init({
+      appId: '540900462987685',
+      autoLogAppEvents: true,
+      xfbml: true,
+      version: 'v3.2'
+    });
+
+    FB.login(function (response) {
+      if (response.authResponse) {
+        console.log('Welcome!  Fetching your information.... ');
+        console.log(response.authResponse.accessToken);
+        fetch("https://atomiccounter.azurewebsites.net/.auth/login/facebook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            "access_token": response.authResponse.accessToken
+          })
+        }).then(response =>
+          response.json().then(value => {
+            fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
+              method: "GET",
+              headers: {
+                "X-ZUMO-AUTH": value.authenticationToken,
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+              }
+            });
+          }));
+      } else {
+        console.log('User cancelled login or did not fully authorize.');
+      }
+    });
+  };
+
+  (function (d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) { return; }
+    js = d.createElement(s); js.id = id;
+    js.src = "https://connect.facebook.net/en_US/sdk.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+</script>
 
 </html>

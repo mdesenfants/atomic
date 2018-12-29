@@ -19,11 +19,13 @@ namespace AtomicCounter.Api
             TraceWriter log)
         {
             var user = (ClaimsPrincipal)Thread.CurrentPrincipal;
-            //var stable_sid = user.Claims.FirstOrDefault(x => x.Type == "stable_sid").Value;
-            //var provider = user.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/identityprovider");
-            //var uid = $"{provider}:{stable_sid}";
 
-            return req.CreateResponse(HttpStatusCode.OK, user.Claims.Select(x => new { x.Type, x.Value }));
+            if (!user.Identity.IsAuthenticated)
+            {
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
+            }
+
+            return req.CreateResponse(HttpStatusCode.OK, user?.Claims?.FirstOrDefault(x => x.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value);
         }
     }
 }
