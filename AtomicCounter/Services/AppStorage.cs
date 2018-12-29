@@ -10,7 +10,7 @@ namespace AtomicCounter.Services
         public const string CountQueueName = "increment-items";
         public static async Task SendIncrementEventAsync(string tenant, string app, string counter, long count = 1)
         {
-            var storageAccount = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
+            var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
             var queueClient = storageAccount.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(CountQueueName);
             await queue.CreateIfNotExistsAsync();

@@ -14,7 +14,7 @@ namespace AtomicCounter.Api
     {
         [FunctionName("Increment")]
         public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{tenant}/{app}/{counter}/increment")]HttpRequestMessage req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}/app/{app}/counter/{counter}/increment")]HttpRequestMessage req,
             TraceWriter log,
             string tenant,
             string app,

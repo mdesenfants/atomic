@@ -50,7 +50,7 @@ namespace AtomicCounter.Services
 
         internal async Task<CloudQueue> GetCounterQueue()
         {
-            var storageAccount = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
+            var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
             var queueClient = storageAccount.CreateCloudQueueClient();
 
             // Retrieve a reference to a container.
@@ -64,7 +64,7 @@ namespace AtomicCounter.Services
 
         internal async Task<CloudTable> GetCounterTable()
         {
-            var storageAccount = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
+            var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
             var tableClient = storageAccount.CreateCloudTableClient();
 
             var tableName = Tableize(Tenant);

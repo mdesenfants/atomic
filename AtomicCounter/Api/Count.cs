@@ -12,7 +12,7 @@ namespace AtomicCounter.Api
     {
         [FunctionName("Count")]
         public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "{tenant}/{app}/{counter}")]HttpRequestMessage req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tenant/{tenant}/app/{app}/counter/{counter}/count")]HttpRequestMessage req,
             string tenant,
             string app,
             string counter,

@@ -1,12 +1,12 @@
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.WebJobs.Host;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
 
 namespace AtomicCounter.Api
 {
@@ -20,7 +20,7 @@ namespace AtomicCounter.Api
         {
             var user = (ClaimsPrincipal)Thread.CurrentPrincipal;
             var stable_sid = user.Claims.FirstOrDefault(x => x.Type == "stable_sid").Value;
-            var provider = user.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/identityprovider"); ;
+            var provider = user.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/identityprovider");
             var uid = $"{provider}:{stable_sid}";
 
             log.Info("C# HTTP trigger function processed a request.");
