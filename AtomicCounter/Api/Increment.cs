@@ -20,7 +20,7 @@ namespace AtomicCounter.Api
             string app,
             string counter)
         {
-            log.Info($"Incrementing {tenant}/{app}/{counter}");
+            log.Info($"Incrementing tenant/{tenant}/app/{app}/counter/{counter}/increment");
             var count = GetCount(req);
 
             try

@@ -54,7 +54,7 @@ namespace AtomicCounter.Services
             var queueClient = storageAccount.CreateCloudQueueClient();
 
             // Retrieve a reference to a container.
-            var queue = queueClient.GetQueueReference($"{Tenant}-{CountPartition}");
+            var queue = queueClient.GetQueueReference($"count-{Tenant}-{CountPartition}");
 
             // Create the queue if it doesn't already exist
             await queue.CreateIfNotExistsAsync();

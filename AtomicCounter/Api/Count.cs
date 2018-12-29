@@ -18,7 +18,7 @@ namespace AtomicCounter.Api
             string counter,
             TraceWriter log)
         {
-            log.Info($"Getting a count for {tenant}/{app}/{counter}.");
+            log.Info($"Getting a count for tenant/{tenant}/app/{app}/counter/{counter}.");
 
             var storage = new CounterStorage(tenant, app, counter);
 
