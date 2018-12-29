@@ -14,32 +14,16 @@ namespace AtomicCounter.Api
     {
         [FunctionName("AddTenant")]
         public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.User, "get", "post", Route = "{tenant}")]HttpRequestMessage req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tenant/{tenant}")]HttpRequestMessage req,
             string tenant,
             TraceWriter log)
         {
             var user = (ClaimsPrincipal)Thread.CurrentPrincipal;
-            var stable_sid = user.Claims.FirstOrDefault(x => x.Type == "stable_sid").Value;
-            var provider = user.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/identityprovider");
-            var uid = $"{provider}:{stable_sid}";
+            //var stable_sid = user.Claims.FirstOrDefault(x => x.Type == "stable_sid").Value;
+            //var provider = user.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/identityprovider");
+            //var uid = $"{provider}:{stable_sid}";
 
-            log.Info("C# HTTP trigger function processed a request.");
-
-            // parse query parameter
-            var name = req.GetQueryNameValuePairs()
-                .FirstOrDefault(q => string.Compare(q.Key, "name", true) == 0)
-                .Value;
-
-            if (name == null)
-            {
-                // Get request body
-                dynamic data = await req.Content.ReadAsAsync<object>();
-                name = data?.name;
-            }
-
-            return name == null
-                ? req.CreateResponse(HttpStatusCode.BadRequest, "Please pass a name on the query string or in the request body")
-                : req.CreateResponse(HttpStatusCode.OK, "Hello " + name);
+            return req.CreateResponse(HttpStatusCode.OK, user.Claims.Select(x => new { x.Type, x.Value }));
         }
     }
 }
