@@ -1,22 +1,32 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 
-namespace AtomicCounter
+namespace AtomicCounter.Api
 {
-    public static class Function1
+    public static class AddTenant
     {
-        [FunctionName("Function1")]
-        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)]HttpRequestMessage req, TraceWriter log)
+        [FunctionName("AddTenant")]
+        public static async Task<HttpResponseMessage> Run(
+            [HttpTrigger(AuthorizationLevel.User, "get", "post", Route = "{tenant}")]HttpRequestMessage req,
+            string tenant,
+            TraceWriter log)
         {
+            var user = (ClaimsPrincipal)Thread.CurrentPrincipal;
+            var stable_sid = user.Claims.FirstOrDefault(x => x.Type == "stable_sid").Value;
+            var provider = user.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/identity/claims/identityprovider"); ;
+            var uid = $"{provider}:{stable_sid}";
+
             log.Info("C# HTTP trigger function processed a request.");
 
             // parse query parameter
-            string name = req.GetQueryNameValuePairs()
+            var name = req.GetQueryNameValuePairs()
                 .FirstOrDefault(q => string.Compare(q.Key, "name", true) == 0)
                 .Value;
 
