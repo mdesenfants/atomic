@@ -1,12 +1,12 @@
+using AtomicCounter.Services;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.WebJobs.Host;
 using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using AtomicCounter.Services;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
 
 namespace AtomicCounter.Api
 {
@@ -23,19 +23,12 @@ namespace AtomicCounter.Api
             log.Info($"Incrementing tenant/{tenant}/app/{app}/counter/{counter}/increment");
             var count = GetCount(req);
 
-            try
+            return await req.AuthorizeAppAndExecute(async () =>
             {
-                return await req.AuthorizeAndExecute(async () =>
-                {
-                    await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
-                    return req.CreateResponse(HttpStatusCode.Accepted);
-                });
-            }
-            catch (InvalidOperationException e) when (e.Message == AuthorizationExtensions.UnauthorizedMessage)
-            {
-                log.Warning(e.Message);
-                return req.CreateResponse(HttpStatusCode.Unauthorized, "Provide a valid token to the key query parameter.");
-            }
+                await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
+                return req.CreateResponse(HttpStatusCode.Accepted);
+            },
+            async () => await Task.FromResult(req.CreateResponse(HttpStatusCode.Unauthorized, "Provide a valid token to the key query parameter.")));
         }
 
         private static long GetCount(HttpRequestMessage req)

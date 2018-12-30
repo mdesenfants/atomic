@@ -1,11 +1,8 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Claims;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
@@ -18,14 +15,10 @@ namespace AtomicCounter.Api
             string tenant,
             TraceWriter log)
         {
-            var user = (ClaimsPrincipal)Thread.CurrentPrincipal;
-
-            if (!user.Identity.IsAuthenticated)
-            {
-                return req.CreateResponse(HttpStatusCode.Unauthorized);
-            }
-
-            return req.CreateResponse(HttpStatusCode.OK, user?.Claims?.FirstOrDefault(x => x.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value);
+            return await req.AuthorizeUserAndExecute(
+                async user => await Task.FromResult(req.CreateResponse(HttpStatusCode.OK, user)),
+                async () => await Task.FromResult(req.CreateResponse(HttpStatusCode.Unauthorized))
+            );
         }
     }
 }
