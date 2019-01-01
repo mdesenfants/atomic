@@ -89,9 +89,9 @@ namespace AtomicCounter.Services
             }
             else
             {
+                var rand = new Random();
                 string randomString()
                 {
-                    var rand = new Random();
                     var builder = new StringBuilder(100);
 
                     for (var i = 0; i < 256; i++)
@@ -127,7 +127,7 @@ namespace AtomicCounter.Services
 
             if (await block.ExistsAsync())
             {
-                var existing = JsonConvert.DeserializeObject<Tenant>(await block.DownloadTextAsync());
+                return JsonConvert.DeserializeObject<Tenant>(await block.DownloadTextAsync());
             }
 
             return null;

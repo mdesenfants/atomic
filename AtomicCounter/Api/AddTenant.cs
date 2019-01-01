@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -27,8 +28,10 @@ namespace AtomicCounter.Api
                         {
                             TenantName = existing.TenantName,
                             Origins = existing.Origins,
-                            ReadKeys = null,
-                            WriteKeys = null
+                            ReadKeys = existing.ReadKeys
+                                .Select(x => AuthorizationExtensions.CombineAndHash(existing.TenantName, x)),
+                            WriteKeys = existing.WriteKeys
+                                .Select(x => AuthorizationExtensions.CombineAndHash(existing.TenantName, x))
                         })
                         : req.CreateResponse(HttpStatusCode.Unauthorized);
                 },

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AtomicCounter.Models;
 using AtomicCounter.Services;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 
 namespace AtomicCounter
@@ -64,9 +65,9 @@ namespace AtomicCounter
 
         public static string CombineAndHash(string a, string b)
         {
-            HashAlgorithm sha = new SHA1CryptoServiceProvider();
+            HashAlgorithm sha = new HMACSHA256();
             var result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
-            return Convert.ToBase64String(result);
+            return Base64UrlEncoder.Encode(result);
         }
 
         internal static async Task<T> AuthorizeUserAndExecute<T>(this HttpRequestMessage req, Func<UserProfile, Task<T>> action, Func<string, T> otherwise)
