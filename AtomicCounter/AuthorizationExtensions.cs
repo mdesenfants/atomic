@@ -1,18 +1,28 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AtomicCounter.Models;
+using AtomicCounter.Services;
+using Newtonsoft.Json;
 
 namespace AtomicCounter
 {
+    public enum KeyMode
+    {
+        Read = 0,
+        Write = 1,
+        Duplex = 2
+    }
+
     internal static class AuthorizationExtensions
     {
-        internal const string UnauthorizedMessage = "Unauthorized";
-
-        internal static async Task<T> AuthorizeAppAndExecute<T>(this HttpRequestMessage req, Func<Task<T>> action, Func<Task<T>> otherwise = null)
+        internal static async Task<T> AuthorizeAppAndExecute<T>(this HttpRequestMessage req, KeyMode mode, string tenant, Func<Task<T>> action, T otherwise)
         {
             var key = req
                 .GetQueryNameValuePairs()
@@ -21,23 +31,55 @@ namespace AtomicCounter
 
             if (key == null)
             {
-                return otherwise != null ? await otherwise() : await Task.FromResult(default(T));
+                return otherwise;
+            }
+
+            var existing = await AppStorage.GetTenantAsync(tenant);
+
+            if (existing == null)
+            {
+                return otherwise;
+            }
+
+            HashSet<string> target = null;
+            switch(mode)
+            {
+                case KeyMode.Read:
+                    target = existing.ReadKeys;
+                    break;
+                case KeyMode.Write:
+                    target = existing.WriteKeys;
+                    break;
+                case KeyMode.Duplex:
+                    throw new NotImplementedException();
+            }
+
+            if (!target.Any(x => CombineAndHash(tenant, x) == key))
+            {
+                return otherwise;
             }
 
             return await action();
         }
 
-        internal static async Task<T> AuthorizeUserAndExecute<T>(this HttpRequestMessage req, Func<string, Task<T>> action, Func<Task<T>> otherwise)
+        public static string CombineAndHash(string a, string b)
+        {
+            HashAlgorithm sha = new SHA1CryptoServiceProvider();
+            byte[] result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
+            return Convert.ToBase64String(result);
+        }
+
+        internal static async Task<T> AuthorizeUserAndExecute<T>(this HttpRequestMessage req, Func<UserProfile, Task<T>> action, T otherwise)
         {
             if (!Thread.CurrentPrincipal.Identity.IsAuthenticated)
             {
-                return otherwise != null ? await otherwise() : await Task.FromResult(default(T));
+                return otherwise;
             }
 
             var authInfo = await req.GetAuthInfoAsync();
             var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
 
-            return await action(userName);
+            return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));
         }
 
         private static HttpClient _httpClient = new HttpClient(); // cache and reuse to avoid repeated creation on Function calls
@@ -60,18 +102,20 @@ namespace AtomicCounter
         /// <returns></returns>
         public static async Task<AuthInfo> GetAuthInfoAsync(this HttpRequestMessage request)
         {
-            string zumoAuthToken = request.GetZumoAuthToken();
+            var zumoAuthToken = request.GetZumoAuthToken();
             if (string.IsNullOrEmpty(zumoAuthToken))
             {
                 return null;
             }
+
             var authMeRequest = new HttpRequestMessage(HttpMethod.Get, GetEasyAuthEndpoint())
             {
                 Headers =
-                        {
-                            { "X-ZUMO-AUTH", zumoAuthToken }
-                        }
+                    {
+                        { "X-ZUMO-AUTH", zumoAuthToken }
+                    }
             };
+
             var response = await _httpClient.SendAsync(authMeRequest);
             var authInfoArray = await response.Content.ReadAsAsync<AuthInfo[]>();
             return authInfoArray.Length >= 1 ? authInfoArray[0] : null; // The .auth/me content is a single item array if it is populated
@@ -82,7 +126,7 @@ namespace AtomicCounter
             // Get the hostname from environment variables so that we don't need config - thank you App Service!
             var hostname = Environment.GetEnvironmentVariable("WEBSITE_HOSTNAME");
             // Build up the .auth/me url
-            string requestUri = $"https://{hostname}/.auth/me";
+            var requestUri = $"https://{hostname}/.auth/me";
             return requestUri;
         }
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,26 +10,28 @@ using Microsoft.Azure.WebJobs.Host;
 
 namespace AtomicCounter.Api
 {
-    public static class AddTenant
+    public static class GetTenant
     {
-        [FunctionName("AddTenant")]
+        [FunctionName("GetTenant")]
         public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}")]HttpRequestMessage req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tenant/{tenant}")]HttpRequestMessage req,
             string tenant,
             TraceWriter log)
         {
             return await req.AuthorizeUserAndExecute(
                 async user =>
                 {
-                    var existing = await AppStorage.GetOrCreateTenantAsync(user, tenant);
+                    var existing = await AppStorage.GetTenantAsync(user, tenant);
 
                     return existing != null
                         ? req.CreateResponse(HttpStatusCode.OK, new TenantViewModel()
                         {
                             TenantName = existing.TenantName,
                             Origins = existing.Origins,
-                            ReadKeys = null,
-                            WriteKeys = null
+                            ReadKeys = existing.ReadKeys
+                                .Select(x => AuthorizationExtensions.CombineAndHash(existing.TenantName, x)),
+                            WriteKeys = existing.WriteKeys
+                                .Select(x => AuthorizationExtensions.CombineAndHash(existing.TenantName, x))
                         })
                         : req.CreateResponse(HttpStatusCode.Unauthorized);
                 },

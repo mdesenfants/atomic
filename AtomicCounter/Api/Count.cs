@@ -20,9 +20,12 @@ namespace AtomicCounter.Api
         {
             log.Info($"Getting a count for tenant/{tenant}/app/{app}/counter/{counter}.");
 
-            var storage = new CounterStorage(tenant, app, counter);
-
-            return req.CreateResponse(HttpStatusCode.OK, await storage.CountAsync());
+            return await req.AuthorizeAppAndExecute(KeyMode.Read, tenant, async () =>
+            {
+                var storage = new CounterStorage(tenant, app, counter);
+                return req.CreateResponse(HttpStatusCode.OK, await storage.CountAsync());
+            },
+            req.CreateResponse(HttpStatusCode.Unauthorized));
         }
     }
 }

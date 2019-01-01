@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AtomicCounter.Services;
@@ -37,7 +38,7 @@ namespace AtomicCounterTest
             var expected = 1001;
             Parallel.For(0, expected, new ParallelOptions()
             {
-                MaxDegreeOfParallelism = 4
+                MaxDegreeOfParallelism = Environment.ProcessorCount
             }, async i => await client.IncrementAsync());
 
             long actual = 0;
