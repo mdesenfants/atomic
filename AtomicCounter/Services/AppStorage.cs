@@ -38,6 +38,7 @@ namespace AtomicCounter.Services
         {
             var tableClient = storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
+            await table.CreateIfNotExistsAsync();
 
             var refEntity = new ProfileMappingEntity()
             {
@@ -45,11 +46,9 @@ namespace AtomicCounter.Services
             };
 
             var op = TableOperation.Retrieve<ProfileMappingEntity>(refEntity.PartitionKey, refEntity.RowKey);
-
             var queryResult = await table.ExecuteAsync(op);
             var resEntity = (ProfileMappingEntity)queryResult?.Result;
 
-            var blobClient = storage.CreateCloudBlobClient();
             if (resEntity == null)
             {
                 // Create profile
@@ -57,6 +56,8 @@ namespace AtomicCounter.Services
 
                 await SaveUserProfileAsync(profile);
                 refEntity.ProfileId = profile.Id;
+
+                await table.ExecuteAsync(TableOperation.Insert(refEntity));
 
                 return profile;
             }
@@ -77,7 +78,7 @@ namespace AtomicCounter.Services
 
         public static async Task<Tenant> GetOrCreateTenantAsync(UserProfile profile, string tenant)
         {
-            var blob = await GetProfileContainerAsync();
+            var blob = await GetTenantContainerAsync();
             var block = blob.GetBlockBlobReference(tenant);
 
             if (await block.ExistsAsync())
@@ -92,8 +93,8 @@ namespace AtomicCounter.Services
                 {
                     var rand = new Random();
                     var builder = new StringBuilder(100);
-                    
-                    for (int i = 0; i < 256; i++)
+
+                    for (var i = 0; i < 256; i++)
                     {
                         builder.Append(rand.Next('a', 'z'));
                     }
@@ -103,8 +104,8 @@ namespace AtomicCounter.Services
 
                 var newTenant = new Tenant() { TenantName = tenant };
                 newTenant.Profiles.Add(profile.Id);
-                for (int i = 0; i < 2; i++) newTenant.ReadKeys.Add(randomString());
-                for (int i = 0; i < 2; i++) newTenant.WriteKeys.Add(randomString());
+                for (var i = 0; i < 2; i++) newTenant.ReadKeys.Add(randomString());
+                for (var i = 0; i < 2; i++) newTenant.WriteKeys.Add(randomString());
 
                 await block.UploadTextAsync(JsonConvert.SerializeObject(newTenant));
 
@@ -116,12 +117,12 @@ namespace AtomicCounter.Services
         {
             var existing = await GetTenantAsync(tenant);
 
-            return existing.Profiles.Contains(profile.Id) ? existing : null;
+            return existing?.Profiles?.Contains(profile.Id) ?? false ? existing : null;
         }
 
         public static async Task<Tenant> GetTenantAsync(string tenant)
         {
-            var blob = await GetProfileContainerAsync();
+            var blob = await GetTenantContainerAsync();
             var block = blob.GetBlockBlobReference(tenant);
 
             if (await block.ExistsAsync())

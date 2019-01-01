@@ -7,7 +7,7 @@ namespace AtomicCounter.Models
     {
         public string Sid
         {
-            get => $"{RowKey}|{PartitionKey}";
+            get => $"{PartitionKey}|{RowKey}";
             set
             {
                 var pipe = value.IndexOf('|');

@@ -28,7 +28,7 @@ namespace AtomicCounter.Api
                 await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
                 return req.CreateResponse(HttpStatusCode.Accepted);
             },
-            req.CreateResponse(HttpStatusCode.Unauthorized, "Provide a valid token to the key query parameter."));
+            x => req.CreateResponse(HttpStatusCode.Unauthorized, x));
         }
 
         private static long GetCount(HttpRequestMessage req)

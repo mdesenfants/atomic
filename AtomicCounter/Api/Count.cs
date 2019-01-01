@@ -25,7 +25,7 @@ namespace AtomicCounter.Api
                 var storage = new CounterStorage(tenant, app, counter);
                 return req.CreateResponse(HttpStatusCode.OK, await storage.CountAsync());
             },
-            req.CreateResponse(HttpStatusCode.Unauthorized));
+            x => req.CreateResponse(HttpStatusCode.Unauthorized, x));
         }
     }
 }

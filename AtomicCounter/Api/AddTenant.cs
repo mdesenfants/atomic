@@ -32,7 +32,7 @@ namespace AtomicCounter.Api
                         })
                         : req.CreateResponse(HttpStatusCode.Unauthorized);
                 },
-                req.CreateResponse(HttpStatusCode.Unauthorized)
+                x => req.CreateResponse(HttpStatusCode.Unauthorized, x)
             );
         }
     }

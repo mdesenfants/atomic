@@ -22,7 +22,7 @@ namespace AtomicCounter
 
     internal static class AuthorizationExtensions
     {
-        internal static async Task<T> AuthorizeAppAndExecute<T>(this HttpRequestMessage req, KeyMode mode, string tenant, Func<Task<T>> action, T otherwise)
+        internal static async Task<T> AuthorizeAppAndExecute<T>(this HttpRequestMessage req, KeyMode mode, string tenant, Func<Task<T>> action, Func<string, T> otherwise)
         {
             var key = req
                 .GetQueryNameValuePairs()
@@ -31,18 +31,18 @@ namespace AtomicCounter
 
             if (key == null)
             {
-                return otherwise;
+                return otherwise($"No API key provided.");
             }
 
             var existing = await AppStorage.GetTenantAsync(tenant);
 
             if (existing == null)
             {
-                return otherwise;
+                return otherwise($"No existing tenant named {tenant}.");
             }
 
             HashSet<string> target = null;
-            switch(mode)
+            switch (mode)
             {
                 case KeyMode.Read:
                     target = existing.ReadKeys;
@@ -56,7 +56,7 @@ namespace AtomicCounter
 
             if (!target.Any(x => CombineAndHash(tenant, x) == key))
             {
-                return otherwise;
+                return otherwise($"No matching keys for {Enum.GetName(typeof(KeyMode), mode)}.");
             }
 
             return await action();
@@ -65,15 +65,15 @@ namespace AtomicCounter
         public static string CombineAndHash(string a, string b)
         {
             HashAlgorithm sha = new SHA1CryptoServiceProvider();
-            byte[] result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
+            var result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
             return Convert.ToBase64String(result);
         }
 
-        internal static async Task<T> AuthorizeUserAndExecute<T>(this HttpRequestMessage req, Func<UserProfile, Task<T>> action, T otherwise)
+        internal static async Task<T> AuthorizeUserAndExecute<T>(this HttpRequestMessage req, Func<UserProfile, Task<T>> action, Func<string, T> otherwise)
         {
             if (!Thread.CurrentPrincipal.Identity.IsAuthenticated)
             {
-                return otherwise;
+                return otherwise("Provide a valid X-ZUMO-AUTH token.");
             }
 
             var authInfo = await req.GetAuthInfoAsync();
