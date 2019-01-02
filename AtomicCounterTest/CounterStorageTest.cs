@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AtomicCounter;
 using AtomicCounter.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.WindowsAzure.Storage;
@@ -17,6 +18,7 @@ namespace AtomicCounterTest
         [ClassInitialize]
         public static async Task ClassInitialize(TestContext context)
         {
+            Environment.SetEnvironmentVariable("AzureWebJobsStorage", "UseDevelopmentStorage=true;");
             var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
             var queueClient = storageAccount.CreateCloudQueueClient();
@@ -52,6 +54,15 @@ namespace AtomicCounterTest
             }
 
             Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void KeyTest()
+        {
+            Func<string> a, b;
+            a = b = () => AuthorizationExtensions.CombineAndHash("a", "b");
+
+            Assert.AreEqual(a(), b());
         }
     }
 }

@@ -21,7 +21,7 @@ namespace AtomicCounter
         Duplex = 2
     }
 
-    internal static class AuthorizationExtensions
+    public static class AuthorizationExtensions
     {
         internal static async Task<T> AuthorizeAppAndExecute<T>(this HttpRequestMessage req, KeyMode mode, string tenant, Func<Task<T>> action, Func<string, T> otherwise)
         {
@@ -65,7 +65,7 @@ namespace AtomicCounter
 
         public static string CombineAndHash(string a, string b)
         {
-            HashAlgorithm sha = new HMACSHA256();
+            HashAlgorithm sha = new SHA256Managed();
             var result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
             return Base64UrlEncoder.Encode(result);
         }
