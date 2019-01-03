@@ -34,6 +34,7 @@ namespace AtomicCounterTest
 
             var mockAuth = new Mock<IAuthorizationProvider>();
 
+            // User auth always passes
             mockAuth
                 .Setup(m =>
                     m.AuthorizeUserAndExecute(
@@ -42,6 +43,7 @@ namespace AtomicCounterTest
                         It.IsAny<FailedAuthDelegate>()))
                 .Returns<HttpRequestMessage, UserAuthDelegate, FailedAuthDelegate>((a, b, c) => b(profile));
 
+            // App auth always passes
             mockAuth
                 .Setup(m =>
                     m.AuthorizeAppAndExecute(
@@ -112,7 +114,7 @@ namespace AtomicCounterTest
                 await queue.DeleteMessageAsync(evt);
             }
 
-            // Get count
+            // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
             Count.AuthProvider = mockAuth.Object;
             req.Method = HttpMethod.Get;
             var iteration = 1;
