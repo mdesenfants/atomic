@@ -91,12 +91,14 @@ namespace AtomicCounterTest
             // Increment counter
             Increment.AuthProvider = mockAuth.Object;
             req.Method = HttpMethod.Post;
+            bool defaultHasRun = false;
             foreach (var key in getTenantViewModel.WriteKeys)
             {
-                var modifier = "&count=2";
+                var modifier = defaultHasRun ? "": "&count=2";
                 req.RequestUri = new Uri($"https://localhost:2020/?key={key}{modifier}");
                 var incrementResult = await Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
                 Assert.AreEqual(HttpStatusCode.Accepted, incrementResult.StatusCode);
+                defaultHasRun = true;
             }
 
             // Handle count event
