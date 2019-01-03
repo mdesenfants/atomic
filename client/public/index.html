@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -67,7 +67,26 @@
             "Accept": "application/json",
             "Content-Type": "application/json"
           }
-        });
+        }).then(tenant => tenant.json().then(info => {
+          let writeKey = info.WriteKeys[0];
+          let readKey = info.ReadKeys[0];
+
+          fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/increment?key="+writeKey, {
+            method: "GET",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json"
+            }
+          }).then(() => {
+            fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/count?key="+readKey, {
+              method: "GET",
+              headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+              }
+            }).then(v => v.json().then(sv => console.log(sv)));
+          });
+        }));
       });
     });
   }
