@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using AtomicCounter;
 using AtomicCounter.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.WindowsAzure.Storage;
 
 namespace AtomicCounterTest
 {
@@ -14,21 +13,6 @@ namespace AtomicCounterTest
         private const string Tenant = "test_tenant";
         private const string App = "test_app";
         private const string Count = "test_count";
-
-        [ClassInitialize]
-        public static async Task ClassInitialize(TestContext context)
-        {
-            Environment.SetEnvironmentVariable("AzureWebJobsStorage", "UseDevelopmentStorage=true;");
-            var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
-
-            var queueClient = storageAccount.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference($"{CounterStorage.Sanitize(Tenant)}-{CounterStorage.Sanitize(App)}-{CounterStorage.Sanitize(Count)}");
-            var what = await queue.DeleteIfExistsAsync();
-
-            var tableClient = storageAccount.CreateCloudTableClient();
-            var table = tableClient.GetTableReference($"{CounterStorage.Tableize(Tenant)}");
-            var what1 = await table.DeleteIfExistsAsync();
-        }
 
         [TestMethod]
         public async Task HappyPathTest()
@@ -60,7 +44,7 @@ namespace AtomicCounterTest
         public void KeyTest()
         {
             Func<string> a, b;
-            a = b = () => AuthorizationExtensions.CombineAndHash("a", "b");
+            a = b = () => AuthorizationHelpers.CombineAndHash("a", "b");
 
             Assert.AreEqual(a(), b());
         }

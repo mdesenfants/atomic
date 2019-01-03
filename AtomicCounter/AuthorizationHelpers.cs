@@ -21,66 +21,13 @@ namespace AtomicCounter
         Duplex = 2
     }
 
-    public static class AuthorizationExtensions
+    public static class AuthorizationHelpers
     {
-        internal static async Task<T> AuthorizeAppAndExecute<T>(this HttpRequestMessage req, KeyMode mode, string tenant, Func<Task<T>> action, Func<string, T> otherwise)
-        {
-            var key = req
-                .GetQueryNameValuePairs()
-                .FirstOrDefault(q => string.Equals(q.Key, "key", StringComparison.OrdinalIgnoreCase))
-                .Value;
-
-            if (key == null)
-            {
-                return otherwise($"No API key provided.");
-            }
-
-            var existing = await AppStorage.GetTenantAsync(tenant);
-
-            if (existing == null)
-            {
-                return otherwise($"No existing tenant named {tenant}.");
-            }
-
-            HashSet<string> target = null;
-            switch (mode)
-            {
-                case KeyMode.Read:
-                    target = existing.ReadKeys;
-                    break;
-                case KeyMode.Write:
-                    target = existing.WriteKeys;
-                    break;
-                case KeyMode.Duplex:
-                    throw new NotImplementedException();
-            }
-
-            if (!target.Any(x => CombineAndHash(tenant, x) == key))
-            {
-                return otherwise($"No matching keys for {Enum.GetName(typeof(KeyMode), mode)}.");
-            }
-
-            return await action();
-        }
-
         public static string CombineAndHash(string a, string b)
         {
             HashAlgorithm sha = new SHA256Managed();
             var result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
             return Base64UrlEncoder.Encode(result);
-        }
-
-        internal static async Task<T> AuthorizeUserAndExecute<T>(this HttpRequestMessage req, Func<UserProfile, Task<T>> action, Func<string, T> otherwise)
-        {
-            if (!Thread.CurrentPrincipal.Identity.IsAuthenticated)
-            {
-                return otherwise("Provide a valid X-ZUMO-AUTH token.");
-            }
-
-            var authInfo = await req.GetAuthInfoAsync();
-            var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
-
-            return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));
         }
 
         private static HttpClient _httpClient = new HttpClient(); // cache and reuse to avoid repeated creation on Function calls
