@@ -13,7 +13,10 @@ namespace AtomicCounterTest
         [TestMethod]
         public async Task CounterThroughputTest()
         {
-            var client = new CounterStorage(Initialize.Tenant, Initialize.App, Initialize.Counter);
+            var client = new CounterStorage(
+                "testa",
+                "testa",
+                "testa");
 
             Assert.AreEqual(0, await client.CountAsync());
 
