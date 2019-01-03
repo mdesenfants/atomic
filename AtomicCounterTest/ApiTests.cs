@@ -93,7 +93,8 @@ namespace AtomicCounterTest
             req.Method = HttpMethod.Post;
             foreach (var key in getTenantViewModel.WriteKeys)
             {
-                req.RequestUri = new Uri("https://localhost:2020/?key=" + key);
+                var modifier = "&count=2";
+                req.RequestUri = new Uri($"https://localhost:2020/?key={key}{modifier}");
                 var incrementResult = await Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
                 Assert.AreEqual(HttpStatusCode.Accepted, incrementResult.StatusCode);
             }
@@ -112,6 +113,7 @@ namespace AtomicCounterTest
             // Get count
             Count.AuthProvider = mockAuth.Object;
             req.Method = HttpMethod.Get;
+            var iteration = 1;
             foreach (var key in getTenantViewModel.ReadKeys)
             {
                 req.RequestUri = new Uri("https://localhost:2020/?key=" + key);
@@ -119,7 +121,8 @@ namespace AtomicCounterTest
                 Assert.AreEqual(HttpStatusCode.OK, countResult.StatusCode);
 
                 var finalCount = long.Parse(await countResult.Content.ReadAsStringAsync());
-                Assert.AreEqual(getTenantViewModel.ReadKeys.Count(), finalCount);
+                Assert.AreEqual((getTenantViewModel.ReadKeys.Count() * 2) - 1, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
+                iteration++;
             }
         }
     }

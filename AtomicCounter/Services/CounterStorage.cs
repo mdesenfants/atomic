@@ -75,9 +75,8 @@ namespace AtomicCounter.Services
             return table;
         }
 
-        public async Task IncrementAsync()
+        public async Task IncrementAsync(long count = 1)
         {
-
             var locks = await GetCounterQueue();
             var @lock = await locks.GetMessageAsync();
             var row = @lock?.AsString ?? Guid.NewGuid().ToString();
@@ -105,7 +104,7 @@ namespace AtomicCounter.Services
                     {
                         PartitionKey = CountPartition,
                         RowKey = row,
-                        Count = 1
+                        Count = count
                     });
 
                     await table.ExecuteAsync(insert);
