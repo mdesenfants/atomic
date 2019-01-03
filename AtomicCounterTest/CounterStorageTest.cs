@@ -10,14 +10,10 @@ namespace AtomicCounterTest
     [TestClass]
     public class CounterStorageTest
     {
-        private const string Tenant = "test_tenant";
-        private const string App = "test_app";
-        private const string Count = "test_count";
-
         [TestMethod]
-        public async Task HappyPathTest()
+        public async Task CounterThroughputTest()
         {
-            var client = new CounterStorage(Tenant, App, Count);
+            var client = new CounterStorage(Initialize.Tenant, Initialize.App, Initialize.Counter);
 
             Assert.AreEqual(0, await client.CountAsync());
 
