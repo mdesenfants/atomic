@@ -11,6 +11,7 @@ namespace AtomicCounterTest
     public class CounterStorageTest
     {
         [TestMethod]
+        [Ignore]
         public async Task CounterThroughputTest()
         {
             var client = new CounterStorage(
