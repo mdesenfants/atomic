@@ -1,9 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
+﻿using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
@@ -67,7 +67,7 @@ namespace AtomicCounter.Services
             var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
             var tableClient = storageAccount.CreateCloudTableClient();
 
-            var tableName = Tableize(Tenant);
+            var tableName = Tableize(Tenant + "counts");
             var table = tableClient.GetTableReference(tableName);
 
             await table.CreateIfNotExistsAsync();
@@ -141,6 +141,11 @@ namespace AtomicCounter.Services
         public async Task<long> CountAsync()
         {
             var table = await GetCounterTable();
+
+            if (table == null)
+            {
+                throw new InvalidOperationException($"No counts available for {Tenant}, {App}, {Counter}.");
+            }
 
             var query = new TableQuery<CountEntity>()
                 .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
