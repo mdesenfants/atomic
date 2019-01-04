@@ -1,11 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Web.Http;
-using System.Web.Http.Hosting;
-using AtomicCounter;
+﻿using AtomicCounter;
 using AtomicCounter.Api;
 using AtomicCounter.EventHandlers;
 using AtomicCounter.Models;
@@ -14,8 +7,12 @@ using AtomicCounter.Models.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
+using System;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>>;
-using FailedAuthDelegate = System.Func<string, System.Net.Http.HttpResponseMessage>;
 using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>>;
 
 namespace AtomicCounterTest
@@ -23,6 +20,8 @@ namespace AtomicCounterTest
     [TestClass]
     public class ApiTests
     {
+        public static readonly string HttpConfigurationKey = "MS_HttpConfiguration";
+
         [TestMethod]
         public async Task HappyPathTests()
         {
@@ -32,27 +31,7 @@ namespace AtomicCounterTest
                 Id = Guid.Parse("4E4393B1-E825-493D-A03B-DC53F58BDD92")
             };
 
-            var mockAuth = new Mock<IAuthorizationProvider>();
-
-            // User auth always passes
-            mockAuth
-                .Setup(m =>
-                    m.AuthorizeUserAndExecute(
-                        It.IsAny<HttpRequestMessage>(),
-                        It.IsAny<UserAuthDelegate>(),
-                        It.IsAny<FailedAuthDelegate>()))
-                .Returns<HttpRequestMessage, UserAuthDelegate, FailedAuthDelegate>((a, b, c) => b(profile));
-
-            // App auth always passes
-            mockAuth
-                .Setup(m =>
-                    m.AuthorizeAppAndExecute(
-                        It.IsAny<HttpRequestMessage>(),
-                        It.IsAny<KeyMode>(),
-                        Initialize.Tenant,
-                        It.IsAny<AppAuthDelegate>(),
-                        It.IsAny<FailedAuthDelegate>()))
-                .Returns<HttpRequestMessage, KeyMode, string, AppAuthDelegate, FailedAuthDelegate>((a, b, c, d, e) => d());
+            Mock<IAuthorizationProvider> mockAuth = GetMockAuthProvider(profile);
 
             var req = new HttpRequestMessage()
             {
@@ -60,7 +39,9 @@ namespace AtomicCounterTest
                 RequestUri = new Uri("https://google.com")
             };
 
-            req.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            req.SetConfiguration(new System.Web.Http.HttpConfiguration());
+
+            //req.Properties[HttpConfigurationKey] = new HttpConfiguration();
             var logger = new TestLogger();
 
             // Add a tenant
@@ -96,7 +77,7 @@ namespace AtomicCounterTest
             bool defaultHasRun = false;
             foreach (var key in getTenantViewModel.WriteKeys)
             {
-                var modifier = defaultHasRun ? "": "&count=2";
+                var modifier = defaultHasRun ? "" : "&count=2";
                 req.RequestUri = new Uri($"https://localhost:2020/?key={key}{modifier}");
                 var incrementResult = await Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
                 Assert.AreEqual(HttpStatusCode.Accepted, incrementResult.StatusCode);
@@ -128,6 +109,30 @@ namespace AtomicCounterTest
                 Assert.AreEqual((getTenantViewModel.ReadKeys.Count() * 2) - 1, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
                 iteration++;
             }
+        }
+
+        private static Mock<IAuthorizationProvider> GetMockAuthProvider(UserProfile profile)
+        {
+            var mockAuth = new Mock<IAuthorizationProvider>();
+
+            // User auth always passes
+            mockAuth
+                .Setup(m =>
+                    m.AuthorizeUserAndExecute(
+                        It.IsAny<HttpRequestMessage>(),
+                        It.IsAny<UserAuthDelegate>()))
+                .Returns<HttpRequestMessage, UserAuthDelegate>((a, b) => b(profile));
+
+            // App auth always passes
+            mockAuth
+                .Setup(m =>
+                    m.AuthorizeAppAndExecute(
+                        It.IsAny<HttpRequestMessage>(),
+                        It.IsAny<KeyMode>(),
+                        Initialize.Tenant,
+                        It.IsAny<AppAuthDelegate>()))
+                .Returns<HttpRequestMessage, KeyMode, string, AppAuthDelegate>((a, b, c, d) => d());
+            return mockAuth;
         }
     }
 }

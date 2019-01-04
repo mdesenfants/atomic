@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace AtomicCounter.Models.ViewModels
 {
@@ -10,10 +6,10 @@ namespace AtomicCounter.Models.ViewModels
     {
         public string TenantName { get; set; }
 
-        public IEnumerable<string> Origins { get; set; } = new HashSet<string>();
+        public IEnumerable<string> Origins { get; set; } = new List<string>();
 
-        public IEnumerable<string> WriteKeys { get; set; } = new HashSet<string>();
+        public IEnumerable<string> WriteKeys { get; set; } = new List<string>();
 
-        public IEnumerable<string> ReadKeys { get; set; } = new HashSet<string>();
+        public IEnumerable<string> ReadKeys { get; set; } = new List<string>();
     }
 }

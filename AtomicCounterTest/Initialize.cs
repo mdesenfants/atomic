@@ -28,7 +28,7 @@ namespace AtomicCounterTest
             await queue.DeleteIfExistsAsync();
 
             var tableClient = Storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference($"{CounterStorage.Tableize(Tenant)}");
+            var table = tableClient.GetTableReference(CounterStorage.Tableize(Tenant+"counts"));
             await table.DeleteIfExistsAsync();
 
             var blobClient = Storage.CreateCloudBlobClient();

@@ -30,8 +30,7 @@ namespace AtomicCounter.Api
             {
                 await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
                 return req.CreateResponse(HttpStatusCode.Accepted);
-            },
-            x => req.CreateResponse(HttpStatusCode.Unauthorized, x));
+            });
         }
 
         private static long GetCount(HttpRequestMessage req)

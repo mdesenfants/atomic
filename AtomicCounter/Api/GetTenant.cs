@@ -39,9 +39,7 @@ namespace AtomicCounter.Api
                                 .Select(x => AuthorizationHelpers.CombineAndHash(existing.TenantName, x))
                         })
                         : req.CreateResponse(HttpStatusCode.Unauthorized);
-                },
-                x => req.CreateResponse(HttpStatusCode.Unauthorized, x)
-            );
+                });
         }
     }
 }

@@ -25,7 +25,7 @@ namespace AtomicCounterTest
             await queue.DeleteIfExistsAsync();
 
             var tableClient = storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference($"{CounterStorage.Tableize(testa)}");
+            var table = tableClient.GetTableReference(CounterStorage.Tableize(testa+"counts"));
             await table.DeleteIfExistsAsync();
 
             var blobClient = storage.CreateCloudBlobClient();
@@ -64,7 +64,6 @@ namespace AtomicCounterTest
         {
             Func<string> a, b;
             a = b = () => AuthorizationHelpers.CombineAndHash("a", "b");
-
             Assert.AreEqual(a(), b());
         }
     }

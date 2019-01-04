@@ -1,10 +1,11 @@
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using AtomicCounter.Services;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
 {
@@ -25,9 +26,15 @@ namespace AtomicCounter.Api
             return await AuthProvider.AuthorizeAppAndExecute(req, KeyMode.Read, tenant, async () =>
             {
                 var storage = new CounterStorage(tenant, app, counter);
-                return req.CreateResponse(HttpStatusCode.OK, await storage.CountAsync());
-            },
-            x => req.CreateResponse(HttpStatusCode.Unauthorized, x));
+                try
+                {
+                    return req.CreateResponse(HttpStatusCode.OK, await storage.CountAsync());
+                }
+                catch (InvalidOperationException ioe)
+                {
+                    return req.CreateResponse(HttpStatusCode.NotFound, ioe.Message);
+                }
+            });
         }
     }
 }

@@ -1,13 +1,12 @@
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using AtomicCounter.Models.ViewModels;
 using AtomicCounter.Services;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
 {
@@ -23,7 +22,8 @@ namespace AtomicCounter.Api
         {
             log.LogInformation("Creating tenant {0}", tenant);
 
-            return await AuthProvider.AuthorizeUserAndExecute(req,
+            return await AuthProvider.AuthorizeUserAndExecute(
+                req,
                 async user =>
                 {
                     var existing = await AppStorage.GetOrCreateTenantAsync(user, tenant);
@@ -39,9 +39,7 @@ namespace AtomicCounter.Api
                                 .Select(x => AuthorizationHelpers.CombineAndHash(existing.TenantName, x))
                         })
                         : req.CreateResponse(HttpStatusCode.Unauthorized);
-                },
-                x => req.CreateResponse(HttpStatusCode.Unauthorized, x)
-            );
+                });
         }
     }
 }

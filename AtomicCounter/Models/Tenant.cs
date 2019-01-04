@@ -9,10 +9,10 @@ namespace AtomicCounter.Models
 
         public HashSet<Guid> Profiles { get; set; } = new HashSet<Guid>();
 
-        public HashSet<string> Origins { get; set; } = new HashSet<string>();
+        public IList<string> Origins { get; set; } = new List<string>();
 
-        public HashSet<string> WriteKeys { get; set; } = new HashSet<string>();
+        public IList<string> WriteKeys { get; set; } = new List<string>();
 
-        public HashSet<string> ReadKeys { get; set; } = new HashSet<string>();
+        public IList<string> ReadKeys { get; set; } = new List<string>();
     }
 }
