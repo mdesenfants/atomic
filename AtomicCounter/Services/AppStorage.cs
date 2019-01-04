@@ -1,13 +1,13 @@
-﻿using System;
-using System.Text;
-using System.Threading.Tasks;
-using AtomicCounter.Models;
+﻿using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
+using System;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
@@ -16,6 +16,8 @@ namespace AtomicCounter.Services
         public const string CountQueueName = "increment-items";
         private const string ProfilesKey = "profiles";
         private const string TenantsKey = "tenants";
+
+        private static readonly Random Random = new Random();
 
         public static async Task SendIncrementEventAsync(string tenant, string app, string counter, long count = 1)
         {
@@ -89,28 +91,37 @@ namespace AtomicCounter.Services
             }
             else
             {
-                var rand = new Random();
-                string randomString()
-                {
-                    var builder = new StringBuilder(100);
-
-                    for (var i = 0; i < 256; i++)
-                    {
-                        builder.Append(rand.Next('a', 'z'));
-                    }
-
-                    return builder.ToString();
-                }
+                RandomString();
 
                 var newTenant = new Tenant() { TenantName = tenant };
                 newTenant.Profiles.Add(profile.Id);
-                for (var i = 0; i < 2; i++) newTenant.ReadKeys.Add(randomString());
-                for (var i = 0; i < 2; i++) newTenant.WriteKeys.Add(randomString());
+
+                for (var i = 0; i < 2; i++)
+                {
+                    newTenant.ReadKeys.Add(RandomString());
+                }
+
+                for (var i = 0; i < 2; i++)
+                {
+                    newTenant.WriteKeys.Add(RandomString());
+                }
 
                 await block.UploadTextAsync(JsonConvert.SerializeObject(newTenant));
 
                 return newTenant;
             }
+        }
+
+        private static string RandomString()
+        {
+            var builder = new StringBuilder(100);
+
+            for (var i = 0; i < 256; i++)
+            {
+                builder.Append(Random.Next('a', 'z'));
+            }
+
+            return builder.ToString();
         }
 
         public static async Task<Tenant> GetTenantAsync(UserProfile profile, string tenant)

@@ -31,25 +31,7 @@ namespace AtomicCounterTest
                 Id = Guid.Parse("4E4393B1-E825-493D-A03B-DC53F58BDD92")
             };
 
-            var mockAuth = new Mock<IAuthorizationProvider>();
-
-            // User auth always passes
-            mockAuth
-                .Setup(m =>
-                    m.AuthorizeUserAndExecute(
-                        It.IsAny<HttpRequestMessage>(),
-                        It.IsAny<UserAuthDelegate>()))
-                .Returns<HttpRequestMessage, UserAuthDelegate>((a, b) => b(profile));
-
-            // App auth always passes
-            mockAuth
-                .Setup(m =>
-                    m.AuthorizeAppAndExecute(
-                        It.IsAny<HttpRequestMessage>(),
-                        It.IsAny<KeyMode>(),
-                        Initialize.Tenant,
-                        It.IsAny<AppAuthDelegate>()))
-                .Returns<HttpRequestMessage, KeyMode, string, AppAuthDelegate>((a, b, c, d) => d());
+            Mock<IAuthorizationProvider> mockAuth = GetMockAuthProvider(profile);
 
             var req = new HttpRequestMessage()
             {
@@ -127,6 +109,30 @@ namespace AtomicCounterTest
                 Assert.AreEqual((getTenantViewModel.ReadKeys.Count() * 2) - 1, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
                 iteration++;
             }
+        }
+
+        private static Mock<IAuthorizationProvider> GetMockAuthProvider(UserProfile profile)
+        {
+            var mockAuth = new Mock<IAuthorizationProvider>();
+
+            // User auth always passes
+            mockAuth
+                .Setup(m =>
+                    m.AuthorizeUserAndExecute(
+                        It.IsAny<HttpRequestMessage>(),
+                        It.IsAny<UserAuthDelegate>()))
+                .Returns<HttpRequestMessage, UserAuthDelegate>((a, b) => b(profile));
+
+            // App auth always passes
+            mockAuth
+                .Setup(m =>
+                    m.AuthorizeAppAndExecute(
+                        It.IsAny<HttpRequestMessage>(),
+                        It.IsAny<KeyMode>(),
+                        Initialize.Tenant,
+                        It.IsAny<AppAuthDelegate>()))
+                .Returns<HttpRequestMessage, KeyMode, string, AppAuthDelegate>((a, b, c, d) => d());
+            return mockAuth;
         }
     }
 }
