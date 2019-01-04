@@ -96,7 +96,7 @@ namespace AtomicCounterTest
             // Handle count event
             await HandleCountEvent(logger);
 
-            // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
+            // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
             await GetCount(mockAuth, req, logger, getTenantViewModel, 5);
         }
 
