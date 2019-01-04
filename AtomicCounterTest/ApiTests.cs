@@ -70,30 +70,38 @@ namespace AtomicCounterTest
             Assert.AreEqual(Initialize.Tenant, getTenantViewModel.TenantName);
 
             // Increment counter
-            Increment.AuthProvider = mockAuth.Object;
-            req.Method = HttpMethod.Post;
-            var defaultHasRun = false;
-            foreach (var key in getTenantViewModel.WriteKeys)
-            {
-                var modifier = defaultHasRun ? "" : "&count=2";
-                req.RequestUri = new Uri($"https://localhost:2020/?key={key}{modifier}");
-                var incrementResult = await Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
-                Assert.AreEqual(HttpStatusCode.Accepted, incrementResult.StatusCode);
-                defaultHasRun = true;
-            }
+            await Increment(mockAuth, req, logger, getTenantViewModel);
 
             // Handle count event
-            var queueClient = Initialize.Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference("increment-items");
-            var countEvents = await queue.GetMessagesAsync(2);
-
-            foreach (var evt in countEvents)
-            {
-                await IncrementEventHandler.Run(JsonConvert.DeserializeObject<IncrementEvent>(evt.AsString), logger);
-                await queue.DeleteMessageAsync(evt);
-            }
+            await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
+            await GetCount(mockAuth, req, logger, getTenantViewModel, 3);
+
+            // Rotate read keys
+            await RotateReadKeys(mockAuth, req, logger, getTenantViewModel, 1);
+
+            // Rotate write keys
+            await RotateWriteKeys(mockAuth, req, logger, getTenantViewModel, 1);
+
+            // Rotate read keys again
+            await RotateReadKeys(mockAuth, req, logger, getTenantViewModel, 0);
+
+            // Rotate write keys again
+            await RotateWriteKeys(mockAuth, req, logger, getTenantViewModel, 0);
+
+            // Increment counter
+            await Increment(mockAuth, req, logger, getTenantViewModel);
+
+            // Handle count event
+            await HandleCountEvent(logger);
+
+            // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
+            await GetCount(mockAuth, req, logger, getTenantViewModel, 5);
+        }
+
+        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel, long expected)
+        {
             Count.AuthProvider = mockAuth.Object;
             req.Method = HttpMethod.Get;
             var iteration = 1;
@@ -104,11 +112,41 @@ namespace AtomicCounterTest
                 Assert.AreEqual(HttpStatusCode.OK, countResult.StatusCode);
 
                 var finalCount = long.Parse(await countResult.Content.ReadAsStringAsync());
-                Assert.AreEqual((getTenantViewModel.ReadKeys.Count() * 2) - 1, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
+                Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
                 iteration++;
             }
+        }
 
-            // Rotate read keys
+        private static async Task HandleCountEvent(TestLogger logger)
+        {
+            var queueClient = Initialize.Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference("increment-items");
+            var countEvents = await queue.GetMessagesAsync(2);
+
+            foreach (var evt in countEvents)
+            {
+                await IncrementEventHandler.Run(JsonConvert.DeserializeObject<IncrementEvent>(evt.AsString), logger);
+                await queue.DeleteMessageAsync(evt);
+            }
+        }
+
+        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel)
+        {
+            AtomicCounter.Api.Increment.AuthProvider = mockAuth.Object;
+            req.Method = HttpMethod.Post;
+            var defaultHasRun = false;
+            foreach (var key in getTenantViewModel.WriteKeys)
+            {
+                var modifier = defaultHasRun ? "" : "&count=2";
+                req.RequestUri = new Uri($"https://localhost:2020/?key={key}{modifier}");
+                var incrementResult = await AtomicCounter.Api.Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+                Assert.AreEqual(HttpStatusCode.Accepted, incrementResult.StatusCode);
+                defaultHasRun = true;
+            }
+        }
+
+        private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
+        {
             RotateKeys.Authorization = mockAuth.Object;
             req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/read/rotate");
             req.Method = HttpMethod.Post;
@@ -116,35 +154,18 @@ namespace AtomicCounterTest
             Assert.IsTrue(readRotateResult.TryGetContentValue<string[]>(out var readKeys));
             Assert.AreEqual(2, readKeys.Length);
             var readDupeCount = readKeys.Where(k => getTenantViewModel.ReadKeys.Contains(k)).Count();
-            Assert.AreEqual(1, readDupeCount);
+            Assert.AreEqual(expected, readDupeCount);
+        }
 
-            // Rotate write keys
+        private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
+        {
             RotateKeys.Authorization = mockAuth.Object;
             req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/write/rotate");
             req.Method = HttpMethod.Post;
             var writeRotateResult = await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
             Assert.IsTrue(writeRotateResult.TryGetContentValue<string[]>(out var writeKeys));
             var writeDupeCount = writeKeys.Where(k => getTenantViewModel.WriteKeys.Contains(k)).Count();
-            Assert.AreEqual(1, writeDupeCount);
-
-            // Rotate read keys again
-            RotateKeys.Authorization = mockAuth.Object;
-            req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/read/rotate");
-            req.Method = HttpMethod.Post;
-            var readRotateResult2 = await RotateKeys.Run(req, Initialize.Tenant, "read", logger);
-            Assert.IsTrue(readRotateResult2.TryGetContentValue<string[]>(out var readKeys2));
-            Assert.AreEqual(2, readKeys.Length);
-            var readDupeCount2 = readKeys2.Where(k => getTenantViewModel.ReadKeys.Contains(k)).Count();
-            Assert.AreEqual(0, readDupeCount2);
-
-            // Rotate write keys again
-            RotateKeys.Authorization = mockAuth.Object;
-            req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/write/rotate");
-            req.Method = HttpMethod.Post;
-            var writeRotateResult2 = await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
-            Assert.IsTrue(readRotateResult2.TryGetContentValue<string[]>(out var writeKeys2));
-            var writeDupeCount2 = writeKeys2.Where(k => getTenantViewModel.WriteKeys.Contains(k)).Count();
-            Assert.AreEqual(0, writeDupeCount2);
+            Assert.AreEqual(expected, writeDupeCount);
         }
 
         private static Mock<IAuthorizationProvider> GetMockAuthProvider(UserProfile profile)
