@@ -20,8 +20,6 @@ namespace AtomicCounterTest
     [TestClass]
     public class ApiTests
     {
-        public static readonly string HttpConfigurationKey = "MS_HttpConfiguration";
-
         [TestMethod]
         public async Task HappyPathTests()
         {
