@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using AtomicCounter.Services;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 
 namespace AtomicCounter.Api
