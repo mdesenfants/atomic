@@ -1,13 +1,15 @@
-﻿using AtomicCounter.Models;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
-using System;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
@@ -34,6 +36,46 @@ namespace AtomicCounter.Services
             }.ToString());
 
             await queue.AddMessageAsync(message);
+        }
+
+        internal static async Task<string[]> RotateKeysAsync(UserProfile user, string tenant, KeyMode mode)
+        {
+            var result = await GetTenantAsync(user, tenant);
+
+            if (result == null)
+            {
+                throw new InvalidOperationException($"Could not find tenant {tenant}.");
+            }
+
+            string[] keys = null;
+            switch (mode)
+            {
+                case KeyMode.Read:
+                    result.ReadKeys = new List<string> {
+                        RandomString(),
+                        result.ReadKeys.First()
+                    };
+                    keys = result.ReadKeys.ToArray();
+                    break;
+                case KeyMode.Write:
+                    result.WriteKeys = new List<string> {
+                        RandomString(),
+                        result.WriteKeys.First()
+                    };
+                    keys = result.WriteKeys.ToArray();
+                    break;
+                case KeyMode.Duplex:
+                    throw new NotImplementedException();
+                default:
+                    return null;
+            }
+
+            var blob = await GetTenantContainerAsync();
+            var block = blob.GetBlockBlobReference(tenant);
+
+            await block.UploadTextAsync(JsonConvert.SerializeObject(result));
+
+            return keys.Select(x => AuthorizationHelpers.CombineAndHash(tenant, x)).ToArray();
         }
 
         public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid)
@@ -91,8 +133,6 @@ namespace AtomicCounter.Services
             }
             else
             {
-                RandomString();
-
                 var newTenant = new Tenant() { TenantName = tenant };
                 newTenant.Profiles.Add(profile.Id);
 
@@ -164,7 +204,7 @@ namespace AtomicCounter.Services
 
         static AppStorage()
         {
-            storage = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+            storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
         }
 
         private static readonly CloudStorageAccount storage;

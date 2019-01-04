@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.168
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicCounter", "AtomicCounter\AtomicCounter.csproj", "{5C960880-7EA8-45D4-AC18-2C294A49856C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AtomicCounter", "AtomicCounter\AtomicCounter.csproj", "{5C960880-7EA8-45D4-AC18-2C294A49856C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicCounterTest", "AtomicCounterTest\AtomicCounterTest.csproj", "{08513A66-9A90-4086-BB4E-74973732023C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AtomicCounterTest", "AtomicCounterTest\AtomicCounterTest.csproj", "{08513A66-9A90-4086-BB4E-74973732023C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
