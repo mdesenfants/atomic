@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using AtomicCounter.Models;
-using AtomicCounter.Services;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using System;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace AtomicCounter
 {
@@ -48,7 +44,7 @@ namespace AtomicCounter
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public static async Task<AuthInfo> GetAuthInfoAsync(this HttpRequestMessage request)
+        public static async Task<AuthInfo> GetAuthInfoAsync(this HttpRequest request)
         {
             var zumoAuthToken = request.GetZumoAuthToken();
             if (string.IsNullOrEmpty(zumoAuthToken))
@@ -78,9 +74,9 @@ namespace AtomicCounter
             return requestUri;
         }
 
-        private static string GetZumoAuthToken(this HttpRequestMessage req)
+        private static string GetZumoAuthToken(this HttpRequest req)
         {
-            return req.Headers.GetValues("X-ZUMO-AUTH").FirstOrDefault();
+            return req.Headers["X-ZUMO-AUTH"];
         }
     }
 

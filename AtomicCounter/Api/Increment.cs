@@ -5,8 +5,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AtomicCounter.Api
 {
@@ -15,8 +16,8 @@ namespace AtomicCounter.Api
         public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
 
         [FunctionName("Increment")]
-        public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}/app/{app}/counter/{counter}/increment")]HttpRequestMessage req,
+        public static async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}/app/{app}/counter/{counter}/increment")]HttpRequest req,
             string tenant,
             string app,
             string counter,
@@ -29,16 +30,13 @@ namespace AtomicCounter.Api
             async () =>
             {
                 await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
-                return req.CreateResponse(HttpStatusCode.Accepted);
+                return new AcceptedResult();
             });
         }
 
-        private static long GetCount(HttpRequestMessage req)
+        private static long GetCount(HttpRequest req)
         {
-            var countString = req
-                .GetQueryNameValuePairs()
-                .FirstOrDefault(p => p.Key.Equals("count", StringComparison.OrdinalIgnoreCase))
-                .Value ?? string.Empty;
+            var countString = req.Query["count"].FirstOrDefault() ?? string.Empty;
 
             long count = 1;
             if (long.TryParse(countString, out var parsed))

@@ -1,5 +1,7 @@
 ﻿using AtomicCounter.Models;
 using AtomicCounter.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,12 +15,9 @@ namespace AtomicCounter
 {
     public class AuthorizationProvider : IAuthorizationProvider
     {
-        public async Task<HttpResponseMessage> AuthorizeAppAndExecute(HttpRequestMessage req, KeyMode mode, string tenant, Func<Task<HttpResponseMessage>> action)
+        public async Task<IActionResult> AuthorizeAppAndExecute(HttpRequest req, KeyMode mode, string tenant, Func<Task<IActionResult>> action)
         {
-            var key = req
-                .GetQueryNameValuePairs()
-                .FirstOrDefault(q => string.Equals(q.Key, "key", StringComparison.OrdinalIgnoreCase))
-                .Value;
+            var key = req.Query["key"].FirstOrDefault();
 
             if (key == null)
             {
@@ -53,7 +52,7 @@ namespace AtomicCounter
             return await action();
         }
 
-        public async Task<HttpResponseMessage> AuthorizeUserAndExecute(HttpRequestMessage req, Func<UserProfile, Task<HttpResponseMessage>> action)
+        public async Task<IActionResult> AuthorizeUserAndExecute(HttpRequest req, Func<UserProfile, Task<IActionResult>> action)
         {
             if (!Thread.CurrentPrincipal.Identity.IsAuthenticated)
             {

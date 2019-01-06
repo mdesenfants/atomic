@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AtomicCounter.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -14,8 +16,8 @@ namespace AtomicCounter.Api
         public static IAuthorizationProvider Authorization = new AuthorizationProvider();
 
         [FunctionName("RotateKeys")]
-        public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{tenant}/keys/{readorwrite}/rotate")]HttpRequestMessage req,
+        public static async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{tenant}/keys/{readorwrite}/rotate")]HttpRequest req,
             string tenant,
             string readorwrite,
             ILogger log)

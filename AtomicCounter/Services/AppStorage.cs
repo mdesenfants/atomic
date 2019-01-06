@@ -117,7 +117,7 @@ namespace AtomicCounter.Services
         {
             var blob = await GetProfileContainerAsync();
             var block = blob.GetBlockBlobReference(profile.Id.ToString());
-            block.UploadText(JsonConvert.SerializeObject(profile));
+            await block.UploadTextAsync(JsonConvert.SerializeObject(profile));
         }
 
         public static async Task<Tenant> GetOrCreateTenantAsync(UserProfile profile, string tenant)
