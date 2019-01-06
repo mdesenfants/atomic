@@ -32,15 +32,15 @@ namespace AtomicCounter.Api
 
                     if (result == null)
                     {
-                        return req.CreateResponse(HttpStatusCode.NotFound);
+                        return new NotFoundResult();
                     }
 
-                    return req.CreateResponse(HttpStatusCode.OK, result);
+                    return new OkObjectResult(result);
 
                 }
                 catch (Exception)
                 {
-                    return req.CreateResponse(HttpStatusCode.NotFound);
+                    return new NotFoundResult();
                 }
             });
         }

@@ -9,6 +9,7 @@ using AtomicCounter.EventHandlers;
 using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using AtomicCounter.Models.ViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
@@ -31,9 +32,9 @@ namespace AtomicCounterTest
 
             var mockAuth = GetMockAuthProvider(profile);
 
-            var req = new HttpRequestMessage()
+            var req = new HttpRequest()
             {
-                Method = HttpMethod.Post,
+                Method = "POST",
                 RequestUri = new Uri("https://google.com")
             };
 
@@ -57,7 +58,7 @@ namespace AtomicCounterTest
 
             // Get existing tenant
             GetTenant.AuthProvider = mockAuth.Object;
-            req.Method = HttpMethod.Get;
+            req.Method = "GET";
             var getTenantResult = await GetTenant.Run(req, Initialize.Tenant, logger);
             var getTenantContent = await getTenantResult.Content.ReadAsStringAsync();
             var getTenantViewModel = JsonConvert.DeserializeObject<TenantViewModel>(content);
@@ -100,10 +101,10 @@ namespace AtomicCounterTest
             await GetCount(mockAuth, req, logger, getTenantViewModel, 5);
         }
 
-        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel, long expected)
+        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, long expected)
         {
             Count.AuthProvider = mockAuth.Object;
-            req.Method = HttpMethod.Get;
+            req.Method = "GET";
             var iteration = 1;
             foreach (var key in getTenantViewModel.ReadKeys)
             {
@@ -130,10 +131,10 @@ namespace AtomicCounterTest
             }
         }
 
-        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel)
+        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel)
         {
             AtomicCounter.Api.Increment.AuthProvider = mockAuth.Object;
-            req.Method = HttpMethod.Post;
+            req.Method = "POST";
             var defaultHasRun = false;
             foreach (var key in getTenantViewModel.WriteKeys)
             {
@@ -145,11 +146,11 @@ namespace AtomicCounterTest
             }
         }
 
-        private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
+        private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
             req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/read/rotate");
-            req.Method = HttpMethod.Post;
+            req.Method = "POST";
             var readRotateResult = await RotateKeys.Run(req, Initialize.Tenant, "read", logger);
             Assert.IsTrue(readRotateResult.TryGetContentValue<string[]>(out var readKeys));
             Assert.AreEqual(2, readKeys.Length);
@@ -157,11 +158,11 @@ namespace AtomicCounterTest
             Assert.AreEqual(expected, readDupeCount);
         }
 
-        private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequestMessage req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
+        private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
             req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/write/rotate");
-            req.Method = HttpMethod.Post;
+            req.Method = "POST";
             var writeRotateResult = await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
             Assert.IsTrue(writeRotateResult.TryGetContentValue<string[]>(out var writeKeys));
             var writeDupeCount = writeKeys.Where(k => getTenantViewModel.WriteKeys.Contains(k)).Count();
@@ -176,19 +177,19 @@ namespace AtomicCounterTest
             mockAuth
                 .Setup(m =>
                     m.AuthorizeUserAndExecute(
-                        It.IsAny<HttpRequestMessage>(),
+                        It.IsAny<HttpRequest>(),
                         It.IsAny<UserAuthDelegate>()))
-                .Returns<HttpRequestMessage, UserAuthDelegate>((a, b) => b(profile));
+                .Returns<HttpRequest, UserAuthDelegate>((a, b) => b(profile));
 
             // App auth always passes
             mockAuth
                 .Setup(m =>
                     m.AuthorizeAppAndExecute(
-                        It.IsAny<HttpRequestMessage>(),
+                        It.IsAny<HttpRequest>(),
                         It.IsAny<KeyMode>(),
                         Initialize.Tenant,
                         It.IsAny<AppAuthDelegate>()))
-                .Returns<HttpRequestMessage, KeyMode, string, AppAuthDelegate>((a, b, c, d) => d());
+                .Returns<HttpRequest, KeyMode, string, AppAuthDelegate>((a, b, c, d) => d());
 
             return mockAuth;
         }

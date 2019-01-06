@@ -21,14 +21,14 @@ namespace AtomicCounter
 
             if (key == null)
             {
-                return req.CreateResponse(HttpStatusCode.Unauthorized, "No API key provided.");
+                return new UnauthorizedResult();
             }
 
             var existing = await AppStorage.GetTenantAsync(tenant);
 
             if (existing == null)
             {
-                return req.CreateResponse(HttpStatusCode.NotFound, $"No existing tenant named {tenant}.");
+                return new NotFoundObjectResult($"No existing tenant named {tenant}.");
             }
 
             IEnumerable<string> target = null;
@@ -46,7 +46,7 @@ namespace AtomicCounter
 
             if (!target.Any(x => AuthorizationHelpers.CombineAndHash(tenant, x) == key))
             {
-                return req.CreateResponse(HttpStatusCode.Unauthorized, $"No matching keys for {Enum.GetName(typeof(KeyMode), mode)}.");
+                return new UnauthorizedResult();
             }
 
             return await action();
@@ -56,7 +56,7 @@ namespace AtomicCounter
         {
             if (!Thread.CurrentPrincipal.Identity.IsAuthenticated)
             {
-                return req.CreateResponse(HttpStatusCode.Unauthorized, "Provide a valid X-ZUMO-AUTH token.");
+                return new UnauthorizedResult();
             }
 
             var authInfo = await req.GetAuthInfoAsync();
