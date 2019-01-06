@@ -30,11 +30,11 @@ namespace AtomicCounter.Api
                 var storage = new CounterStorage(tenant, app, counter);
                 try
                 {
-                    return req.CreateResponse(HttpStatusCode.OK, await storage.CountAsync());
+                    return new OkObjectResult(await storage.CountAsync());
                 }
                 catch (InvalidOperationException ioe)
                 {
-                    return req.CreateResponse(HttpStatusCode.NotFound, ioe.Message);
+                    return new NotFoundObjectResult(ioe.Message);
                 }
             });
         }

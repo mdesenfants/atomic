@@ -30,7 +30,7 @@ namespace AtomicCounter.Api
                     var existing = await AppStorage.GetTenantAsync(user, tenant);
 
                     return existing != null
-                        ? req.CreateResponse(HttpStatusCode.OK, new TenantViewModel()
+                        ? new OkObjectResult(new TenantViewModel()
                         {
                             TenantName = existing.TenantName,
                             Origins = existing.Origins,
@@ -39,7 +39,7 @@ namespace AtomicCounter.Api
                             WriteKeys = existing.WriteKeys
                                 .Select(x => AuthorizationHelpers.CombineAndHash(existing.TenantName, x))
                         })
-                        : req.CreateResponse(HttpStatusCode.Unauthorized);
+                        : (IActionResult)new NotFoundResult();
                 });
         }
     }
