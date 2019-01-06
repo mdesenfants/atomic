@@ -13,8 +13,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
-using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>>;
-using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>>;
+using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
+using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 
 namespace AtomicCounterTest
 {
@@ -32,7 +32,7 @@ namespace AtomicCounterTest
 
             var mockAuth = GetMockAuthProvider(profile);
 
-            var req = new HttpRequest()
+            var req = new HttpRequestMessage()
             {
                 Method = "POST",
                 RequestUri = new Uri("https://google.com")
