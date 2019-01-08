@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
-using AtomicCounter;
 using AtomicCounter.Api;
 using AtomicCounter.EventHandlers;
 using AtomicCounter.Models;
@@ -107,7 +104,7 @@ namespace AtomicCounter.Test
             var iteration = 1;
             foreach (var key in getTenantViewModel.ReadKeys)
             {
-                req.Path = new PathString("/?key=" + key);
+                req.QueryString = new QueryString("?key=" + key);
                 var countResult = (OkObjectResult)await Count.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
                 var finalCount = (long)countResult.Value;
                 Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
@@ -136,7 +133,7 @@ namespace AtomicCounter.Test
             foreach (var key in getTenantViewModel.WriteKeys)
             {
                 var modifier = defaultHasRun ? "" : "&count=2";
-                req.Path = new PathString($"/?key={key}{modifier}");
+                req.QueryString = new QueryString($"?key={key}{modifier}");
                 var incrementResult = (AcceptedResult)await AtomicCounter.Api.Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
                 Assert.IsNotNull(incrementResult);
                 defaultHasRun = true;
@@ -146,24 +143,22 @@ namespace AtomicCounter.Test
         private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
-            req.Path = new PathString($"/api/tenant/{Initialize.Tenant}/keys/read/rotate");
             req.Method = "POST";
             var readRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Tenant, "read", logger);
             var readKeys = (string[])readRotateResult.Value;
             Assert.AreEqual(2, readKeys.Length);
-            var readDupeCount = readKeys.Where(k => getTenantViewModel.ReadKeys.Contains(k)).Count();
+            var readDupeCount = readKeys.Count(k => getTenantViewModel.ReadKeys.Contains(k));
             Assert.AreEqual(expected, readDupeCount);
         }
 
         private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
-            req.Path = new PathString($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/write/rotate");
             req.Method = "POST";
             var writeRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
             var writeKeys = (string[])writeRotateResult.Value;
             Assert.AreEqual(2, writeKeys.Length);
-            var writeDupeCount = writeKeys.Where(k => getTenantViewModel.ReadKeys.Contains(k)).Count();
+            var writeDupeCount = writeKeys.Count(k => getTenantViewModel.WriteKeys.Contains(k));
             Assert.AreEqual(expected, writeDupeCount);
         }
 
