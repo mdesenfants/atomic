@@ -10,13 +10,15 @@ using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using AtomicCounter.Models.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Internal;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 
-namespace AtomicCounterTest
+namespace AtomicCounter.Test
 {
     [TestClass]
     public class ApiTests
@@ -32,13 +34,11 @@ namespace AtomicCounterTest
 
             var mockAuth = GetMockAuthProvider(profile);
 
-            var req = new HttpRequestMessage()
+            var req = new DefaultHttpRequest(new DefaultHttpContext())
             {
                 Method = "POST",
-                RequestUri = new Uri("https://google.com")
+                Path = new PathString()
             };
-
-            req.SetConfiguration(new System.Web.Http.HttpConfiguration());
 
             //req.Properties[HttpConfigurationKey] = new HttpConfiguration();
             var logger = new TestLogger();
@@ -46,8 +46,8 @@ namespace AtomicCounterTest
             // Add a tenant
             AddTenant.AuthProvider = mockAuth.Object;
             var result = await AddTenant.Run(req, Initialize.Tenant, logger);
-            var content = await result.Content.ReadAsStringAsync();
-            var tenantViewModel = JsonConvert.DeserializeObject<TenantViewModel>(content);
+            var content = (OkObjectResult)result;
+            var tenantViewModel = (TenantViewModel)content.Value;
 
             Assert.IsNotNull(tenantViewModel);
             Assert.IsNotNull(tenantViewModel.ReadKeys);
@@ -59,9 +59,8 @@ namespace AtomicCounterTest
             // Get existing tenant
             GetTenant.AuthProvider = mockAuth.Object;
             req.Method = "GET";
-            var getTenantResult = await GetTenant.Run(req, Initialize.Tenant, logger);
-            var getTenantContent = await getTenantResult.Content.ReadAsStringAsync();
-            var getTenantViewModel = JsonConvert.DeserializeObject<TenantViewModel>(content);
+            var getTenantResult = (OkObjectResult)await GetTenant.Run(req, Initialize.Tenant, logger);
+            var getTenantViewModel = (TenantViewModel)getTenantResult.Value;
 
             Assert.IsNotNull(getTenantViewModel);
             Assert.IsNotNull(getTenantViewModel.ReadKeys);
@@ -108,11 +107,9 @@ namespace AtomicCounterTest
             var iteration = 1;
             foreach (var key in getTenantViewModel.ReadKeys)
             {
-                req.RequestUri = new Uri("https://localhost:2020/?key=" + key);
-                var countResult = await Count.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
-                Assert.AreEqual(HttpStatusCode.OK, countResult.StatusCode);
-
-                var finalCount = long.Parse(await countResult.Content.ReadAsStringAsync());
+                req.Path = new PathString("/?key=" + key);
+                var countResult = (OkObjectResult)await Count.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+                var finalCount = (long)countResult.Value;
                 Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
                 iteration++;
             }
@@ -139,9 +136,9 @@ namespace AtomicCounterTest
             foreach (var key in getTenantViewModel.WriteKeys)
             {
                 var modifier = defaultHasRun ? "" : "&count=2";
-                req.RequestUri = new Uri($"https://localhost:2020/?key={key}{modifier}");
-                var incrementResult = await AtomicCounter.Api.Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
-                Assert.AreEqual(HttpStatusCode.Accepted, incrementResult.StatusCode);
+                req.Path = new PathString($"/?key={key}{modifier}");
+                var incrementResult = (AcceptedResult)await AtomicCounter.Api.Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+                Assert.IsNotNull(incrementResult);
                 defaultHasRun = true;
             }
         }
@@ -149,10 +146,10 @@ namespace AtomicCounterTest
         private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
-            req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/read/rotate");
+            req.Path = new PathString($"/api/tenant/{Initialize.Tenant}/keys/read/rotate");
             req.Method = "POST";
-            var readRotateResult = await RotateKeys.Run(req, Initialize.Tenant, "read", logger);
-            Assert.IsTrue(readRotateResult.TryGetContentValue<string[]>(out var readKeys));
+            var readRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Tenant, "read", logger);
+            var readKeys = (string[])readRotateResult.Value;
             Assert.AreEqual(2, readKeys.Length);
             var readDupeCount = readKeys.Where(k => getTenantViewModel.ReadKeys.Contains(k)).Count();
             Assert.AreEqual(expected, readDupeCount);
@@ -161,11 +158,12 @@ namespace AtomicCounterTest
         private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
-            req.RequestUri = new Uri($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/write/rotate");
+            req.Path = new PathString($"https://localhost:2020/api/tenant/{Initialize.Tenant}/keys/write/rotate");
             req.Method = "POST";
-            var writeRotateResult = await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
-            Assert.IsTrue(writeRotateResult.TryGetContentValue<string[]>(out var writeKeys));
-            var writeDupeCount = writeKeys.Where(k => getTenantViewModel.WriteKeys.Contains(k)).Count();
+            var writeRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
+            var writeKeys = (string[])writeRotateResult.Value;
+            Assert.AreEqual(2, writeKeys.Length);
+            var writeDupeCount = writeKeys.Where(k => getTenantViewModel.ReadKeys.Contains(k)).Count();
             Assert.AreEqual(expected, writeDupeCount);
         }
 

@@ -2,7 +2,7 @@
 using Moq;
 using System;
 
-namespace AtomicCounterTest
+namespace AtomicCounter.Test
 {
     public class TestLogger : ILogger
     {

@@ -4,7 +4,7 @@ using AtomicCounter.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.WindowsAzure.Storage;
 
-namespace AtomicCounterTest
+namespace AtomicCounter.Test
 {
     [TestClass]
     public class Initialize
