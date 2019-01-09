@@ -95,6 +95,20 @@ namespace AtomicCounter.Test
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
             await GetCount(mockAuth, req, logger, getTenantViewModel, 5);
+
+            // Should reset count to zero
+            await RunResetCounter(mockAuth, req, logger);
+
+            // Makes sure counter was reset
+            await GetCount(mockAuth, req, logger, getTenantViewModel, 0);
+        }
+
+        private async Task RunResetCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
+        {
+            ResetCounter.AuthProvider = mockAuth.Object;
+            req.Method = "DELETE";
+            var resetResult = (AcceptedResult)await ResetCounter.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+            Assert.IsNotNull(resetResult);
         }
 
         private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, long expected)

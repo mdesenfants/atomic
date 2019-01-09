@@ -1,6 +1,5 @@
-using System;
-using System.Linq;
 using System.Threading.Tasks;
+using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -11,15 +10,24 @@ namespace AtomicCounter.Api
 {
     public static class ResetCounter
     {
+        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+
         [FunctionName("ResetCounter")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)]HttpRequest req, ILogger log)
+        public static async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "tenant/{tenant}/app/{app}/counter/{counter}")]HttpRequest req,
+            string tenant,
+            string app,
+            string counter,
+            ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            log.LogInformation($"Resetting {tenant}/{app}/{counter}.");
 
-            // parse query parameter
-            string name = req.Query["name"].FirstOrDefault();
-
-            throw new NotImplementedException();
+            return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
+            {
+                var storage = new CounterStorage(tenant, app, counter);
+                await storage.ResetAsync(profile);
+                return new AcceptedResult();
+            });
         }
     }
 }

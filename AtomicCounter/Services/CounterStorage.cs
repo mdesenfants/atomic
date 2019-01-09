@@ -1,9 +1,10 @@
-﻿using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Queue;
-using Microsoft.WindowsAzure.Storage.Table;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using AtomicCounter.Models;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace AtomicCounter.Services
 {
@@ -144,7 +145,7 @@ namespace AtomicCounter.Services
 
             if (table == null)
             {
-                throw new InvalidOperationException($"No counts available for {Tenant}, {App}, {Counter}.");
+                return 0;
             }
 
             var query = new TableQuery<CountEntity>()
@@ -158,10 +159,23 @@ namespace AtomicCounter.Services
                 var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
                 token = resultSegment.ContinuationToken;
 
-                sum += resultSegment.Results.Select(x => x.Count).ToArray().Sum();
+                sum += resultSegment.Results.Sum(x => x.Count);
             } while (token != null);
 
             return sum;
+        }
+
+        public async Task ResetAsync(UserProfile profile)
+        {
+            var tenant = AppStorage.GetTenantAsync(profile, Tenant);
+
+            if (tenant == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            var table = await GetCounterTable();
+            await table.DeleteIfExistsAsync();
         }
     }
 
