@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using AtomicCounter.Models;
@@ -18,8 +19,6 @@ namespace AtomicCounter.Services
         public const string CountQueueName = "increment-items";
         private const string ProfilesKey = "profiles";
         private const string TenantsKey = "tenants";
-
-        private static readonly Random Random = new Random();
 
         public static async Task SendIncrementEventAsync(string tenant, string app, string counter, long count = 1)
         {
@@ -154,11 +153,18 @@ namespace AtomicCounter.Services
 
         private static string RandomString()
         {
-            var builder = new StringBuilder(100);
+            const int strlen = 256;
+            var builder = new StringBuilder(strlen);
 
-            for (var i = 0; i < 256; i++)
+            using (var random = new RNGCryptoServiceProvider())
             {
-                builder.Append(Random.Next('a', 'z'));
+                for (var i = 0; i < 256; i++)
+                {
+                    var byteArray = new byte[4];
+                    random.GetBytes(byteArray);
+                    var randomInt = BitConverter.ToUInt32(byteArray, 0) % 26 + 'a';
+                    builder.Append((char)randomInt);
+                }
             }
 
             return builder.ToString();

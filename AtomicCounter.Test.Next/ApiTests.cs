@@ -36,8 +36,7 @@ namespace AtomicCounter.Test
                 Method = "POST",
                 Path = new PathString()
             };
-
-            //req.Properties[HttpConfigurationKey] = new HttpConfiguration();
+            
             var logger = new TestLogger();
 
             // Add a tenant
