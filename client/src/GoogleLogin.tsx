@@ -7,7 +7,7 @@ hello.init({
     google: '1076081007580-rabmg87rit0dcdcc6m29pecc35i0lj5p.apps.googleusercontent.com'
 });
 
-class GoogleLogin extends React.Component {
+export default class GoogleLogin extends React.Component {
     private static async getGoogleToken(): Promise<string|null> {
         const value = await hello('google').login({
             force: false,
@@ -42,5 +42,3 @@ class GoogleLogin extends React.Component {
         alert(await counter.count());
     }
 }
-
-export default GoogleLogin;

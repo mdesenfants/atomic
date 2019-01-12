@@ -6,7 +6,6 @@ export interface ITenant {
 }
 
 export class AtomicCounter {
-
     public static async getAuthToken(token: string): Promise<string> {
         const response = await fetch("https://atomiccounter.azurewebsites.net/.auth/login/google", {
             body: JSON.stringify({
