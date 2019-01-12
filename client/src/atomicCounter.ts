@@ -9,13 +9,13 @@ export class AtomicCounter {
     public static async getAuthToken(token: string): Promise<string> {
         const response = await fetch("https://atomiccounter.azurewebsites.net/.auth/login/google", {
             body: JSON.stringify({
-                "id_token": token
+                id_token: token
             }),
             headers: {
                 "Content-Type": "application/json"
             },
             method: "POST",
-        })
+        });
 
         const ez = await response.json();
 

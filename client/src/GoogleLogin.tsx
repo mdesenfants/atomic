@@ -1,14 +1,17 @@
 import * as hello from 'hellojs';
 import * as React from 'react';
-import { AtomicCounter } from './atomicCounter';
 import './GoogleLogin.css';
 
-hello.init({
-    google: '1076081007580-rabmg87rit0dcdcc6m29pecc35i0lj5p.apps.googleusercontent.com'
-});
+interface IGoogleProps {
+    tokenCallback: (token: any) => void;
+}
 
-export default class GoogleLogin extends React.Component {
-    private static async getGoogleToken(): Promise<string|null> {
+interface IGoogleState {
+    tokenCallback: (token: any) => void;
+}
+
+export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleState> {
+    private static async getGoogleToken(): Promise<string | null> {
         const value = await hello('google').login({
             force: false,
             response_type: 'id_token token',
@@ -18,9 +21,18 @@ export default class GoogleLogin extends React.Component {
         return value.authResponse ? value.authResponse.id_token ? value.authResponse.id_token : null : null;
     }
 
+    constructor(props: IGoogleProps) {
+        super(props);
+        // tslint:disable-next-line:no-console
+        this.state = { tokenCallback: props.tokenCallback };
+    }
+
     public render() {
+        const callback = this.signIn.bind(this);
+
         return (
-            <button onClick={this.signIn}>Sign In</button>
+            // tslint:disable-next-line:jsx-no-bind
+            <button onClick={callback}>Sign In</button>
         );
     }
 
@@ -31,14 +43,14 @@ export default class GoogleLogin extends React.Component {
             return;
         }
 
-        const counter = new AtomicCounter(await AtomicCounter.getAuthToken(goog));
+        this.state.tokenCallback(goog);
 
-        // await counter.createTenant();
-        await Promise.all([
-            await counter.increment(),
-            await counter.increment(),
-        ]);
+        // const counter = new AtomicCounter(await AtomicCounter.getAuthToken(goog));
 
-        alert(await counter.count());
+        // // await counter.createTenant();
+        // await Promise.all([
+        //     await counter.increment(),
+        //     await counter.increment(),
+        // ]);
     }
 }
