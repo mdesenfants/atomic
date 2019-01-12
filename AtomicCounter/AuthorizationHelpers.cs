@@ -46,7 +46,7 @@ namespace AtomicCounter
         /// <returns></returns>
         public static async Task<AuthInfo> GetAuthInfoAsync(this HttpRequest request)
         {
-            var zumoAuthToken = request.GetZumoAuthToken();
+            var zumoAuthToken = request?.GetZumoAuthToken();
             if (string.IsNullOrEmpty(zumoAuthToken))
             {
                 return null;
@@ -61,7 +61,7 @@ namespace AtomicCounter
             };
 
             var response = await _httpClient.SendAsync(authMeRequest);
-            var authInfoArray = await response.Content.ReadAsAsync<AuthInfo[]>();
+            var authInfoArray = await response?.Content?.ReadAsAsync<AuthInfo[]>();
             return authInfoArray.Length >= 1 ? authInfoArray[0] : null; // The .auth/me content is a single item array if it is populated
         }
 
@@ -76,7 +76,8 @@ namespace AtomicCounter
 
         private static string GetZumoAuthToken(this HttpRequest req)
         {
-            return req.Headers["X-ZUMO-AUTH"];
+            var header = req.Headers["X-ZUMO-AUTH"];
+            return header.FirstOrDefault();
         }
     }
 

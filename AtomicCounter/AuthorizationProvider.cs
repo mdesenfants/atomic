@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,12 +52,13 @@ namespace AtomicCounter
 
         public async Task<IActionResult> AuthorizeUserAndExecute(HttpRequest req, Func<UserProfile, Task<IActionResult>> action)
         {
-            if (!Thread.CurrentPrincipal.Identity.IsAuthenticated)
+            var authenticated = Thread.CurrentPrincipal?.Identity?.IsAuthenticated ?? false;
+            if (authenticated)
             {
                 return new UnauthorizedResult();
             }
 
-            var authInfo = await req.GetAuthInfoAsync();
+            var authInfo = await req?.GetAuthInfoAsync();
             var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
 
             return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));

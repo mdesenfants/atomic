@@ -1,5 +1,6 @@
 import * as React from 'react';
 import './App.css';
+import GoogleLogin from './GoogleLogin'
 
 import logo from './logo.svg';
 
@@ -11,12 +12,12 @@ class App extends React.Component {
       <div className="App">
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to React</h1>
+          <h1 className="App-title">Atomic Counter</h1>
         </header>
         <p className="App-intro">
           To get started, edit <code>src/App.tsx</code> and save to reload.
         </p>
-        <div className="g-signin2" data-onsuccess="onSignIn" data-theme="light" />
+        <GoogleLogin />
       </div>
     );
   }

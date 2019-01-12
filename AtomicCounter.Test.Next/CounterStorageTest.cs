@@ -1,10 +1,9 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using AtomicCounter;
 using AtomicCounter.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.WindowsAzure.Storage;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Test
 {

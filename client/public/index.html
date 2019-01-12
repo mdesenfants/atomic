@@ -42,55 +42,6 @@
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
 </body>
-<script>
-  function onSignIn(googleUser) {
-    // Useful data for your client-side scripts:
-    var profile = googleUser.getBasicProfile();
-
-    // The ID token you need to pass to your backend:
-    var id_token = googleUser.getAuthResponse().id_token;
-
-    fetch("https://atomiccounter.azurewebsites.net/.auth/login/google", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        "id_token": id_token
-      })
-    }).then(response => {
-      response.json().then(value => {
-        fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
-          method: "GET",
-          headers: {
-            "X-ZUMO-AUTH": value.authenticationToken,
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-          }
-        }).then(tenant => tenant.json().then(info => {
-          let writeKey = info.WriteKeys[0];
-          let readKey = info.ReadKeys[0];
-
-          fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/increment?key="+writeKey, {
-            method: "GET",
-            headers: {
-              "Accept": "application/json",
-              "Content-Type": "application/json"
-            }
-          }).then(() => {
-            fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/count?key="+readKey, {
-              method: "GET",
-              headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-              }
-            }).then(v => v.json().then(sv => console.log(sv)));
-          });
-        }));
-      });
-    });
-  }
-</script>
 <!-- <script>
   window.fbAsyncInit = function () {
     FB.init({
