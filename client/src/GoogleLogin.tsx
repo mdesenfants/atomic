@@ -1,5 +1,6 @@
 import * as hello from 'hellojs';
 import * as React from 'react';
+import { AtomicCounter } from './atomicCounter';
 import './GoogleLogin.css';
 
 hello.init({
@@ -7,6 +8,15 @@ hello.init({
 });
 
 class GoogleLogin extends React.Component {
+    private static async getGoogleToken(): Promise<string|null> {
+        const value = await hello('google').login({
+            force: false,
+            response_type: 'id_token token',
+            scope: 'openid'
+        });
+
+        return value.authResponse ? value.authResponse.id_token ? value.authResponse.id_token : null : null;
+    }
 
     public render() {
         return (
@@ -14,69 +24,22 @@ class GoogleLogin extends React.Component {
         );
     }
 
-    private signIn() {
-        hello('google')
-            .login({
-                force: false,
-                response_type: 'id_token token',
-                scope: 'openid'
-            })
-            .then(value => {
-                const token = value.authResponse ? value.authResponse.id_token : null;
+    private async signIn(): Promise<void> {
+        const goog = await GoogleLogin.getGoogleToken();
 
-                if (!token) {
-                    return;
-                }
+        if (!goog) {
+            return;
+        }
 
-                fetch("https://atomiccounter.azurewebsites.net/.auth/login/google", {
-                    body: JSON.stringify({
-                        "id_token": token
-                    }),
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    method: "POST",
-                }).then(response => {
-                    response.json().then(ezauth => {
-                        fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
-                            headers: {
-                                "Accept": "application/json",
-                                "Content-Type": "application/json",
-                                "X-ZUMO-AUTH": ezauth.authenticationToken
-                            },
-                            method: "POST"
-                        }).then(() =>
-                            fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
-                                headers: {
-                                    "Accept": "application/json",
-                                    "Content-Type": "application/json",
-                                    "X-ZUMO-AUTH": ezauth.authenticationToken
-                                },
-                                method: "GET",
-                            }).then(tenant => tenant.json().then(info => {
-                                const writeKey = info.writeKeys[0];
-                                const readKey = info.readKeys[0];
+        const counter = new AtomicCounter(await AtomicCounter.getAuthToken(goog));
 
-                                fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/increment?key=" + writeKey, {
-                                    headers: {
-                                        "Accept": "application/json",
-                                        "Content-Type": "application/json"
-                                    },
-                                    method: "POST"
-                                }).then(() => {
-                                    fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/count?key=" + readKey, {
-                                        headers: {
-                                            "Accept": "application/json",
-                                            "Content-Type": "application/json"
-                                        },
-                                        method: "GET"
-                                    }).then(v => v.json().then(sv => alert(sv)));
-                                });
-                            }))
-                        );
-                    });
-                });
-            });
+        // await counter.createTenant();
+        await Promise.all([
+            await counter.increment(),
+            await counter.increment(),
+        ]);
+
+        alert(await counter.count());
     }
 }
 
