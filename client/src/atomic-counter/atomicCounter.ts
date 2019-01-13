@@ -5,8 +5,8 @@ export interface ITenant {
     readKeys: string[];
 }
 
-export async function increment(key: string): Promise<void> {
-    await fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/increment?key=" + key, {
+export async function increment(tenant: string, app: string, counter: string, key: string): Promise<void> {
+    await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/increment?key=${key}`, {
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -15,8 +15,8 @@ export async function increment(key: string): Promise<void> {
     });
 }
 
-export async function count(key: string): Promise<number> {
-    return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/count?key=" + key, {
+export async function count(tenant: string, app: string, counter: string, key: string): Promise<number> {
+    return await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/count?key=${key}`, {
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -50,8 +50,8 @@ export class AtomicCounterClient {
         this.token = authToken;
     }
 
-    public async createTenant() {
-        return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
+    public async createTenant(tenant: string) {
+        return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
@@ -61,8 +61,8 @@ export class AtomicCounterClient {
         }).then(t => t.json() as unknown as ITenant);
     }
 
-    public async getTenant() {
-        return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
+    public async getTenant(tenant: string) {
+        return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
@@ -72,19 +72,23 @@ export class AtomicCounterClient {
         }).then(t => t.json() as unknown as ITenant);
     }
 
-    public async increment(): Promise<void> {
+    public async increment(tenant: string, app: string, counter: string): Promise<void> {
         if (!this.tenants) {
-            this.tenants = [await this.getTenant()];
+            this.tenants = [await this.getTenant(tenant)];
         }
 
-        await increment(this.tenants[0].writeKeys[0]);
+        const key = this.tenants.filter(t => t.tenantName === tenant)[0].writeKeys[0];
+
+        await increment(tenant, app, counter, key);
     }
 
-    public async count(): Promise<number> {
+    public async count(tenant: string, app: string, counter: string): Promise<number> {
         if (!this.tenants) {
-            this.tenants = [await this.getTenant()];
+            this.tenants = [await this.getTenant(tenant)];
         }
 
-        return await count(this.tenants[0].readKeys[0]);
+        const key = this.tenants.filter(t => t.tenantName === tenant)[0].readKeys[0];
+
+        return await count(tenant, app, counter, key);
     }
 }

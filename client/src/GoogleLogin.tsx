@@ -23,7 +23,6 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
 
     constructor(props: IGoogleProps) {
         super(props);
-        // tslint:disable-next-line:no-console
         this.state = { tokenCallback: props.tokenCallback };
     }
 
@@ -31,7 +30,6 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
         const callback = this.signIn.bind(this);
 
         return (
-            // tslint:disable-next-line:jsx-no-bind
             <button onClick={callback}>Sign In</button>
         );
     }
@@ -44,13 +42,5 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
         }
 
         this.state.tokenCallback(goog);
-
-        // const counter = new AtomicCounter(await AtomicCounter.getAuthToken(goog));
-
-        // // await counter.createTenant();
-        // await Promise.all([
-        //     await counter.increment(),
-        //     await counter.increment(),
-        // ]);
     }
 }

@@ -1,7 +1,7 @@
 import * as tslib_1 from "tslib";
-export function increment(key) {
+export function increment(tenant, app, counter, key) {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
-        yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/increment?key=" + key, {
+        yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/increment?key=${key}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
@@ -10,9 +10,9 @@ export function increment(key) {
         });
     });
 }
-export function count(key) {
+export function count(tenant, app, counter, key) {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
-        return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill/app/bill/counter/bill/count?key=" + key, {
+        return yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/count?key=${key}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
@@ -40,9 +40,9 @@ export class AtomicCounterClient {
     constructor(authToken) {
         this.token = authToken;
     }
-    createTenant() {
+    createTenant(tenant) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
+            return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
@@ -52,9 +52,9 @@ export class AtomicCounterClient {
             }).then(t => t.json());
         });
     }
-    getTenant() {
+    getTenant(tenant) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
+            return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
@@ -64,20 +64,22 @@ export class AtomicCounterClient {
             }).then(t => t.json());
         });
     }
-    increment() {
+    increment(tenant, app, counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             if (!this.tenants) {
-                this.tenants = [yield this.getTenant()];
+                this.tenants = [yield this.getTenant(tenant)];
             }
-            yield increment(this.tenants[0].writeKeys[0]);
+            const key = this.tenants.filter(t => t.tenantName === tenant)[0].writeKeys[0];
+            yield increment(tenant, app, counter, key);
         });
     }
-    count() {
+    count(tenant, app, counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             if (!this.tenants) {
-                this.tenants = [yield this.getTenant()];
+                this.tenants = [yield this.getTenant(tenant)];
             }
-            return yield count(this.tenants[0].readKeys[0]);
+            const key = this.tenants.filter(t => t.tenantName === tenant)[0].readKeys[0];
+            return yield count(tenant, app, counter, key);
         });
     }
 }

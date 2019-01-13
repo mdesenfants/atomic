@@ -12,12 +12,27 @@ hello.init({
 
 interface IAppState {
     client: AtomicCounterClient | null;
+    count: number;
+    timeoutHandle: NodeJS.Timeout | null;
 }
 
 class App extends React.Component<{}, IAppState> {
+
     constructor(props: {}) {
         super(props);
-        this.state = { client: null };
+        this.state = { client: null, count: 0, timeoutHandle: null };
+    }
+
+    public componentDidMount() {
+        const handle = setInterval((() => {
+            if (this.state.client) {
+                this.state.client
+                    .count("bill", "bill", "bill")
+                    .then(r => this.setState({ count: r }));
+            }
+        }).bind(this), 5 * 1000);
+
+        this.setState({ timeoutHandle: handle });
     }
 
     public render() {
@@ -37,6 +52,9 @@ class App extends React.Component<{}, IAppState> {
                 <p className="App-intro">
                     {this.state.client ? "logged in" : null}
                 </p>
+                <p className="App-intro">
+                    {this.state.count}
+                </p>
                 {this.state.client ? null : <GoogleLogin tokenCallback={callback} />}
                 {this.state.client ? <button onClick={inc}>Increment</button> : null}
                 {this.state.client ? <button onClick={count}>Count</button> : null}
@@ -46,13 +64,13 @@ class App extends React.Component<{}, IAppState> {
 
     private async increment(): Promise<void> {
         if (this.state.client) {
-            this.state.client.increment();
+            this.state.client.increment("bill", "bill", "bill");
         }
     }
 
     private async count(): Promise<void> {
         if (this.state.client) {
-            alert(await this.state.client.count());
+            alert(await this.state.client.count("bill", "bill", "bill"));
         }
     }
 }
