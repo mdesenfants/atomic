@@ -25,7 +25,7 @@ namespace AtomicCounter.Api
 
             return await AuthProvider.AuthorizeAppAndExecute(req, KeyMode.Read, tenant, async () =>
             {
-                var storage = new CounterStorage(tenant, app, counter);
+                var storage = new CounterStorage(tenant, app, counter, log);
                 try
                 {
                     return new OkObjectResult(await storage.CountAsync());

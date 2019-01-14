@@ -140,7 +140,7 @@ namespace AtomicCounter.Test
 
         private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel)
         {
-            AtomicCounter.Api.Increment.AuthProvider = mockAuth.Object;
+            Api.Increment.AuthProvider = mockAuth.Object;
             req.Method = "POST";
             var defaultHasRun = false;
             foreach (var key in getTenantViewModel.WriteKeys)

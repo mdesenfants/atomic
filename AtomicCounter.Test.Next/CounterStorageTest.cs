@@ -1,9 +1,9 @@
-using AtomicCounter.Services;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.WindowsAzure.Storage;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AtomicCounter.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.WindowsAzure.Storage;
 
 namespace AtomicCounter.Test
 {
@@ -24,7 +24,7 @@ namespace AtomicCounter.Test
             await queue.DeleteIfExistsAsync();
 
             var tableClient = storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(CounterStorage.Tableize(testa+"counts"));
+            var table = tableClient.GetTableReference(CounterStorage.Tableize(testa + "counts"));
             await table.DeleteIfExistsAsync();
 
             var blobClient = storage.CreateCloudBlobClient();
@@ -32,10 +32,7 @@ namespace AtomicCounter.Test
             await blobClient.GetContainerReference("tenants").GetBlockBlobReference(testa).DeleteIfExistsAsync();
             #endregion
 
-            var client = new CounterStorage(
-                testa,
-                testa,
-                testa);
+            var client = new CounterStorage(testa, testa, testa, new TestLogger());
 
             Assert.AreEqual(0, await client.CountAsync());
 

@@ -24,6 +24,7 @@ namespace AtomicCounter.Services
             Tenant = Sanitize(tenant);
             App = Sanitize(app);
             Counter = Sanitize(counter);
+            this.logger = logger;
         }
 
         public static string Sanitize(string input)
@@ -143,6 +144,7 @@ namespace AtomicCounter.Services
                     }
                     catch
                     {
+                        logger.LogWarning("Couldn't delete lock message. Skipping.");
                         // not a big deal
                     }
                 }
@@ -155,6 +157,7 @@ namespace AtomicCounter.Services
                     }
                     catch
                     {
+                        logger.LogWarning("Could not add new lock. Skipping.");
                         // not a big deal
                     }
                 }
@@ -190,21 +193,29 @@ namespace AtomicCounter.Services
             }
             catch
             {
+                logger.LogWarning($"There was a problem counting {Tenant}/{App}/{Counter}. Defaulting to 0.");
                 return 0;
             }
         }
 
         public async Task ResetAsync(UserProfile profile)
         {
-            var tenant = AppStorage.GetTenantAsync(profile, Tenant);
-
-            if (tenant == null)
+            try
             {
-                throw new InvalidOperationException();
-            }
+                var tenant = AppStorage.GetTenantAsync(profile, Tenant);
 
-            var table = await GetCounterTable();
-            await table.DeleteIfExistsAsync();
+                if (tenant == null)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                var table = await GetCounterTable();
+                await table.DeleteIfExistsAsync();
+            }
+            catch
+            {
+                logger.LogWarning($"Cannot reset counter {Tenant}/{App}/{Counter}.");
+            }
         }
     }
 
