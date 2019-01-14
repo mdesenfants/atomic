@@ -1,10 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using AtomicCounter.Models;
+﻿using AtomicCounter.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
@@ -14,9 +15,11 @@ namespace AtomicCounter.Services
         private readonly string App;
         private readonly string Counter;
 
+        private readonly ILogger logger;
+
         private string CountPartition => $"{App}-{Counter}";
 
-        public CounterStorage(string tenant, string app, string counter)
+        public CounterStorage(string tenant, string app, string counter, ILogger logger)
         {
             Tenant = Sanitize(tenant);
             App = Sanitize(app);
@@ -51,29 +54,48 @@ namespace AtomicCounter.Services
 
         internal async Task<CloudQueue> GetCounterQueue()
         {
-            var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
-            var queueClient = storageAccount.CreateCloudQueueClient();
+            string queueName = $"count-{Tenant}-{CountPartition}";
+            try
+            {
+                var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+                var queueClient = storageAccount.CreateCloudQueueClient();
 
-            // Retrieve a reference to a container.
-            var queue = queueClient.GetQueueReference($"count-{Tenant}-{CountPartition}");
+                // Retrieve a reference to a container.
 
-            // Create the queue if it doesn't already exist
-            await queue.CreateIfNotExistsAsync();
+                var queue = queueClient.GetQueueReference(queueName);
 
-            return queue;
+                // Create the queue if it doesn't already exist
+                await queue.CreateIfNotExistsAsync();
+
+                return queue;
+            }
+            catch
+            {
+                logger.LogError($"Could not get counter queue {queueName}.");
+                throw;
+            }
         }
 
         internal async Task<CloudTable> GetCounterTable()
         {
-            var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
-            var tableClient = storageAccount.CreateCloudTableClient();
-
             var tableName = Tableize(Tenant + "counts");
-            var table = tableClient.GetTableReference(tableName);
+            try
+            {
+                var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+                var tableClient = storageAccount.CreateCloudTableClient();
 
-            await table.CreateIfNotExistsAsync();
 
-            return table;
+                var table = tableClient.GetTableReference(tableName);
+
+                await table.CreateIfNotExistsAsync();
+
+                return table;
+            }
+            catch
+            {
+                logger.LogError($"Could not get table {tableName}");
+                throw;
+            }
         }
 
         public async Task IncrementAsync(long count = 1)
@@ -141,28 +163,35 @@ namespace AtomicCounter.Services
 
         public async Task<long> CountAsync()
         {
-            var table = await GetCounterTable();
+            try
+            {
+                var table = await GetCounterTable();
 
-            if (table == null)
+                if (table == null)
+                {
+                    return 0;
+                }
+
+                var query = new TableQuery<CountEntity>()
+                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
+
+                // Print the fields for each customer.
+                long sum = 0;
+                TableContinuationToken token = null;
+                do
+                {
+                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
+                    token = resultSegment.ContinuationToken;
+
+                    sum += resultSegment.Results.Sum(x => x.Count);
+                } while (token != null);
+
+                return sum;
+            }
+            catch
             {
                 return 0;
             }
-
-            var query = new TableQuery<CountEntity>()
-                .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
-
-            // Print the fields for each customer.
-            long sum = 0;
-            TableContinuationToken token = null;
-            do
-            {
-                var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
-                token = resultSegment.ContinuationToken;
-
-                sum += resultSegment.Results.Sum(x => x.Count);
-            } while (token != null);
-
-            return sum;
         }
 
         public async Task ResetAsync(UserProfile profile)

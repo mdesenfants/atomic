@@ -30,7 +30,7 @@ class App extends React.Component<{}, IAppState> {
                     .count("bill", "bill", "bill")
                     .then(r => this.setState({ count: r }));
             }
-        }).bind(this), 5 * 1000);
+        }).bind(this), 1 * 1000);
 
         this.setState({ timeoutHandle: handle });
     }
@@ -41,7 +41,7 @@ class App extends React.Component<{}, IAppState> {
         };
 
         const inc = this.increment.bind(this);
-        const count = this.count.bind(this);
+        const reset = this.reset.bind(this);
 
         return (
             <div className="App">
@@ -57,7 +57,7 @@ class App extends React.Component<{}, IAppState> {
                 </p>
                 {this.state.client ? null : <GoogleLogin tokenCallback={callback} />}
                 {this.state.client ? <button onClick={inc}>Increment</button> : null}
-                {this.state.client ? <button onClick={count}>Count</button> : null}
+                {this.state.client ? <button onClick={reset}>Reset</button> : null}
             </div>
         );
     }
@@ -68,9 +68,9 @@ class App extends React.Component<{}, IAppState> {
         }
     }
 
-    private async count(): Promise<void> {
+    private async reset(): Promise<void> {
         if (this.state.client) {
-            alert(await this.state.client.count("bill", "bill", "bill"));
+            this.state.client.reset("bill", "bill", "bill");
         }
     }
 }

@@ -79,7 +79,19 @@ export class AtomicCounterClient {
                 this.tenants = [yield this.getTenant(tenant)];
             }
             const key = this.tenants.filter(t => t.tenantName === tenant)[0].readKeys[0];
-            return yield count(tenant, app, counter, key);
+            return yield count(tenant, app, counter, key).catch(() => 0);
+        });
+    }
+    reset(tenant, app, counter) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}`, {
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "X-ZUMO-AUTH": this.token
+                },
+                method: "DELETE",
+            });
         });
     }
 }

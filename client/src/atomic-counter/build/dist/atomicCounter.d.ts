@@ -15,4 +15,5 @@ export declare class AtomicCounterClient {
     getTenant(tenant: string): Promise<ITenant>;
     increment(tenant: string, app: string, counter: string): Promise<void>;
     count(tenant: string, app: string, counter: string): Promise<number>;
+    reset(tenant: string, app: string, counter: string): Promise<void>;
 }

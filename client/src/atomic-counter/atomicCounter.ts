@@ -89,6 +89,17 @@ export class AtomicCounterClient {
 
         const key = this.tenants.filter(t => t.tenantName === tenant)[0].readKeys[0];
 
-        return await count(tenant, app, counter, key);
+        return await count(tenant, app, counter, key).catch(() => 0);
+    }
+
+    public async reset(tenant: string, app: string, counter: string): Promise<void> {
+        await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}`, {
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-ZUMO-AUTH": this.token
+            },
+            method: "DELETE",
+        });
     }
 }
