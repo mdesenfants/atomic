@@ -37,6 +37,27 @@ namespace AtomicCounter.Services
             await queue.AddMessageAsync(message);
         }
 
+        public static async Task ResetIncrementEventsAsync()
+        {
+            var queueClient = storage.CreateCloudQueueClient();
+            var poison = queueClient.GetQueueReference(CountQueueName + "-poison");
+            var queue = queueClient.GetQueueReference(CountQueueName);
+
+            if (await poison.ExistsAsync())
+            {
+                var countSetting = Environment.GetEnvironmentVariable("ResetCount");
+                var messages = await poison.GetMessagesAsync(!string.IsNullOrWhiteSpace(countSetting) ? int.Parse(countSetting) : 32);
+
+                foreach (var message in messages)
+                {
+                    if (message == null) continue;
+
+                    await poison.DeleteMessageAsync(message);
+                    await queue.AddMessageAsync(message);
+                }
+            }
+        }
+
         internal static async Task<string[]> RotateKeysAsync(UserProfile user, string tenant, KeyMode mode)
         {
             var result = await GetTenantAsync(user, tenant);

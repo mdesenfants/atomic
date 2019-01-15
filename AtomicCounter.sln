@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.28307.168
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AtomicCounter", "AtomicCounter\AtomicCounter.csproj", "{5C960880-7EA8-45D4-AC18-2C294A49856C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicCounter.Test", "AtomicCounter.Test.Next\AtomicCounter.Test.csproj", "{04DE702B-0A4D-4E7B-9F91-0CD7F36A2020}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AtomicCounter.Test", "AtomicCounter.Test.Next\AtomicCounter.Test.csproj", "{04DE702B-0A4D-4E7B-9F91-0CD7F36A2020}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

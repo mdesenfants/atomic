@@ -1,11 +1,11 @@
-﻿using AtomicCounter.Models;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using AtomicCounter.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
@@ -55,7 +55,7 @@ namespace AtomicCounter.Services
 
         internal async Task<CloudQueue> GetCounterQueue()
         {
-            string queueName = $"count-{Tenant}-{CountPartition}";
+            var queueName = $"count-{Tenant}-{CountPartition}";
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
@@ -145,7 +145,6 @@ namespace AtomicCounter.Services
                     catch
                     {
                         logger.LogWarning("Couldn't delete lock message. Skipping.");
-                        // not a big deal
                     }
                 }
 
@@ -158,7 +157,6 @@ namespace AtomicCounter.Services
                     catch
                     {
                         logger.LogWarning("Could not add new lock. Skipping.");
-                        // not a big deal
                     }
                 }
             }
