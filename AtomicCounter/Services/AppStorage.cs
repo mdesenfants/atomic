@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
@@ -37,25 +38,45 @@ namespace AtomicCounter.Services
             await queue.AddMessageAsync(message);
         }
 
-        public static async Task ResetIncrementEventsAsync()
+        public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token)
         {
             var queueClient = storage.CreateCloudQueueClient();
             var poison = queueClient.GetQueueReference(CountQueueName + "-poison");
             var queue = queueClient.GetQueueReference(CountQueueName);
 
+            int retval = 0;
             if (await poison.ExistsAsync())
             {
                 var countSetting = Environment.GetEnvironmentVariable("ResetCount");
-                var messages = await poison.GetMessagesAsync(!string.IsNullOrWhiteSpace(countSetting) ? int.Parse(countSetting) : 32);
 
-                foreach (var message in messages)
+                async Task<bool> canContinue()
                 {
-                    if (message == null) continue;
+                    if (token.IsCancellationRequested) return false;
 
-                    await poison.DeleteMessageAsync(message);
-                    await queue.AddMessageAsync(message);
+                    await poison.FetchAttributesAsync();
+                    return queue.ApproximateMessageCount.HasValue && queue.ApproximateMessageCount > 0;
+                }
+
+                var countSettingValue = !string.IsNullOrWhiteSpace(countSetting) ? int.Parse(countSetting) : 32;
+
+                while (await canContinue())
+                {
+                    var maxBatchSize = Math.Min(queue.ApproximateMessageCount.Value, countSettingValue);
+
+                    var messages = await poison.GetMessagesAsync(maxBatchSize);
+
+                    foreach (var message in messages)
+                    {
+                        if (message == null) continue;
+
+                        retval++;
+                        await poison.DeleteMessageAsync(message);
+                        await queue.AddMessageAsync(message);
+                    }
                 }
             }
+
+            return retval;
         }
 
         internal static async Task<string[]> RotateKeysAsync(UserProfile user, string tenant, KeyMode mode)

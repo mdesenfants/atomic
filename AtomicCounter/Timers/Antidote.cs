@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using AtomicCounter.Services;
 using Microsoft.Azure.WebJobs;
@@ -11,11 +12,16 @@ namespace AtomicCounter.Timers
         private const string everyFiveMinutes = "*/5 * * * *";
 
         [FunctionName("Antidote")]
-        public static async Task Run([TimerTrigger(everyFiveMinutes)]TimerInfo myTimer, ILogger log)
+        public static async Task Run(
+            [TimerTrigger(everyFiveMinutes)]TimerInfo myTimer,
+            ILogger log,
+            CancellationToken token)
         {
             log.LogInformation($"Retrying poison items at {DateTime.Now}.");
 
-            await AppStorage.ResetIncrementEventsAsync();
+            var total = await AppStorage.RetryPoisonIncrementEventsAsync(token);
+
+            log.LogInformation($"Resubmitted {total} increment operations from poison queue.");
         }
     }
 }
