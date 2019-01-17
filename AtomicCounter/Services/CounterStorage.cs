@@ -1,11 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using AtomicCounter.Models;
+﻿using AtomicCounter.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
@@ -21,9 +21,9 @@ namespace AtomicCounter.Services
 
         public CounterStorage(string tenant, string app, string counter, ILogger logger)
         {
-            Tenant = Sanitize(tenant);
-            App = Sanitize(app);
-            Counter = Sanitize(counter);
+            Tenant = tenant;
+            App = app;
+            Counter = counter;
             this.logger = logger;
         }
 
@@ -53,21 +53,38 @@ namespace AtomicCounter.Services
             return value;
         }
 
-        internal async Task<CloudQueue> GetCounterQueue()
+        public async Task CreateCounterLockQueue()
         {
-            var queueName = $"count-{Tenant}-{CountPartition}";
+            var queueName = $"count-{Sanitize(Tenant)}-{Sanitize(CountPartition)}";
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
                 var queueClient = storageAccount.CreateCloudQueueClient();
 
                 // Retrieve a reference to a container.
+                var queue = queueClient.GetQueueReference(queueName);
 
+                await queue.CreateIfNotExistsAsync();
+            }
+            catch
+            {
+                logger.LogError($"Could not get counter queue {queueName}.");
+                throw;
+            }
+        }
+
+        internal CloudQueue GetCounterLockQueue()
+        {
+            var queueName = $"count-{Sanitize(Tenant)}-{Sanitize(CountPartition)}";
+            try
+            {
+                var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+                var queueClient = storageAccount.CreateCloudQueueClient();
+
+                // Retrieve a reference to a container.
                 var queue = queueClient.GetQueueReference(queueName);
 
                 // Create the queue if it doesn't already exist
-                await queue.CreateIfNotExistsAsync();
-
                 return queue;
             }
             catch
@@ -77,19 +94,14 @@ namespace AtomicCounter.Services
             }
         }
 
-        internal async Task<CloudTable> GetCounterTable()
+        internal CloudTable GetCounterTable()
         {
-            var tableName = Tableize(Tenant + "counts");
+            var tableName = Tableize(Sanitize(Tenant) + "counts");
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
                 var tableClient = storageAccount.CreateCloudTableClient();
-
-
                 var table = tableClient.GetTableReference(tableName);
-
-                await table.CreateIfNotExistsAsync();
-
                 return table;
             }
             catch
@@ -99,15 +111,38 @@ namespace AtomicCounter.Services
             }
         }
 
+        public async Task CreateCounterAsync(UserProfile user)
+        {
+            var tenant = await AppStorage.GetTenantAsync(user, Tenant);
+
+            if (tenant == null) throw new UnauthorizedAccessException();
+
+            var tableName = Tableize(Sanitize(Tenant) + "counts");
+            try
+            {
+                var table = GetCounterTable();
+                await table.CreateIfNotExistsAsync();
+                var locks = GetCounterLockQueue();
+                await locks.CreateIfNotExistsAsync();
+
+                await AppStorage.AddCounterToTenant(user, Tenant, App, Counter);
+            }
+            catch
+            {
+                logger.LogError($"Could not create table {tableName}");
+                throw;
+            }
+        }
+
         public async Task IncrementAsync(long count = 1)
         {
-            var locks = await GetCounterQueue();
+            var locks = GetCounterLockQueue();
             var @lock = await locks.GetMessageAsync();
             var row = @lock?.AsString ?? Guid.NewGuid().ToString();
 
             try
             {
-                var table = await GetCounterTable();
+                var table = GetCounterTable();
 
                 var read = TableOperation.Retrieve<CountEntity>(CountPartition, row);
                 var result = await table.ExecuteAsync(read);
@@ -166,7 +201,7 @@ namespace AtomicCounter.Services
         {
             try
             {
-                var table = await GetCounterTable();
+                var table = GetCounterTable();
 
                 if (table == null)
                 {
@@ -204,11 +239,12 @@ namespace AtomicCounter.Services
 
                 if (tenant == null)
                 {
-                    throw new InvalidOperationException();
+                    throw new UnauthorizedAccessException();
                 }
 
-                var table = await GetCounterTable();
-                await table.DeleteIfExistsAsync();
+                var table = GetCounterTable();
+                await table.DeleteAsync();
+                await table.CreateAsync();
             }
             catch
             {

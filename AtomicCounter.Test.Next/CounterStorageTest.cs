@@ -33,7 +33,6 @@ namespace AtomicCounter.Test
             #endregion
 
             var client = new CounterStorage(testa, testa, testa, new TestLogger());
-
             Assert.AreEqual(0, await client.CountAsync());
 
             var expected = 100;

@@ -36,34 +36,20 @@ namespace AtomicCounter.Test
                 Method = "POST",
                 Path = new PathString()
             };
-            
+
             var logger = new TestLogger();
 
             // Add a tenant
-            AddTenant.AuthProvider = mockAuth.Object;
-            var result = await AddTenant.Run(req, Initialize.Tenant, logger);
-            var content = (OkObjectResult)result;
-            var tenantViewModel = (TenantViewModel)content.Value;
-
-            Assert.IsNotNull(tenantViewModel);
-            Assert.IsNotNull(tenantViewModel.ReadKeys);
-            Assert.IsNotNull(tenantViewModel.WriteKeys);
-            Assert.AreEqual(2, tenantViewModel.ReadKeys.Count());
-            Assert.AreEqual(2, tenantViewModel.WriteKeys.Count());
-            Assert.AreEqual(Initialize.Tenant, tenantViewModel.TenantName);
+            var tenantViewModel = await AddTenant(mockAuth, req, logger);
 
             // Get existing tenant
-            GetTenant.AuthProvider = mockAuth.Object;
-            req.Method = "GET";
-            var getTenantResult = (OkObjectResult)await GetTenant.Run(req, Initialize.Tenant, logger);
-            var getTenantViewModel = (TenantViewModel)getTenantResult.Value;
+            var getTenantViewModel = await GetExistingTenant(mockAuth, req, logger, tenantViewModel);
 
-            Assert.IsNotNull(getTenantViewModel);
-            Assert.IsNotNull(getTenantViewModel.ReadKeys);
-            Assert.IsNotNull(getTenantViewModel.WriteKeys);
-            Assert.AreEqual(tenantViewModel.ReadKeys.Count(), getTenantViewModel.ReadKeys.Count());
-            Assert.AreEqual(tenantViewModel.WriteKeys.Count(), getTenantViewModel.WriteKeys.Count());
-            Assert.AreEqual(Initialize.Tenant, getTenantViewModel.TenantName);
+            // Add counter to tenant
+            AddCounter.AuthProvider = mockAuth.Object;
+            req.Method = "POST";
+            var res = await AddCounter.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+            Assert.IsNotNull(res as CreatedAtRouteResult);
 
             // Increment counter
             await Increment(mockAuth, req, logger, getTenantViewModel);
@@ -100,6 +86,38 @@ namespace AtomicCounter.Test
 
             // Makes sure counter was reset
             await GetCount(mockAuth, req, logger, getTenantViewModel, 0);
+        }
+
+        private static async Task<TenantViewModel> AddTenant(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
+        {
+            Api.AddTenant.AuthProvider = mockAuth.Object;
+            var result = await Api.AddTenant.Run(req, Initialize.Tenant, logger);
+            var content = (OkObjectResult)result;
+            var tenantViewModel = (TenantViewModel)content.Value;
+
+            Assert.IsNotNull(tenantViewModel);
+            Assert.IsNotNull(tenantViewModel.ReadKeys);
+            Assert.IsNotNull(tenantViewModel.WriteKeys);
+            Assert.AreEqual(2, tenantViewModel.ReadKeys.Count());
+            Assert.AreEqual(2, tenantViewModel.WriteKeys.Count());
+            Assert.AreEqual(Initialize.Tenant, tenantViewModel.TenantName);
+            return tenantViewModel;
+        }
+
+        private static async Task<TenantViewModel> GetExistingTenant(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger, TenantViewModel tenantViewModel)
+        {
+            GetTenant.AuthProvider = mockAuth.Object;
+            req.Method = "GET";
+            var getTenantResult = (OkObjectResult)await GetTenant.Run(req, Initialize.Tenant, logger);
+            var getTenantViewModel = (TenantViewModel)getTenantResult.Value;
+
+            Assert.IsNotNull(getTenantViewModel);
+            Assert.IsNotNull(getTenantViewModel.ReadKeys);
+            Assert.IsNotNull(getTenantViewModel.WriteKeys);
+            Assert.AreEqual(tenantViewModel.ReadKeys.Count(), getTenantViewModel.ReadKeys.Count());
+            Assert.AreEqual(tenantViewModel.WriteKeys.Count(), getTenantViewModel.WriteKeys.Count());
+            Assert.AreEqual(Initialize.Tenant, getTenantViewModel.TenantName);
+            return getTenantViewModel;
         }
 
         private async Task RunResetCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
