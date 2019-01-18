@@ -1,11 +1,10 @@
-using System;
-using System.Threading.Tasks;
 using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
 {
@@ -26,14 +25,7 @@ namespace AtomicCounter.Api
             return await AuthProvider.AuthorizeAppAndExecute(req, KeyMode.Read, tenant, async () =>
             {
                 var storage = new CounterStorage(tenant, app, counter, log);
-                try
-                {
-                    return new OkObjectResult(await storage.CountAsync());
-                }
-                catch (InvalidOperationException ioe)
-                {
-                    return new NotFoundObjectResult(ioe.Message);
-                }
+                return new OkObjectResult(await storage.CountAsync());
             });
         }
     }

@@ -32,13 +32,14 @@ namespace AtomicCounter.Test
             await blobClient.GetContainerReference("tenants").GetBlockBlobReference(testa).DeleteIfExistsAsync();
             #endregion
 
-            var client = new CounterStorage(testa, testa, testa, new TestLogger());
+            var logger = new TestLogger();
+            var client = new CounterStorage(testa, testa, testa, logger);
             Assert.AreEqual(0, await client.CountAsync());
 
             var profile = new Models.UserProfile() { Id = Guid.NewGuid() };
             await AppStorage.GetOrCreateTenantAsync(profile, "testa");
 
-            await client.CreateCounterAsync(profile);
+            await AppStorage.CreateCounterAsync(profile, testa, testa, testa, logger);
 
             var expected = 100;
             Parallel.For(0, expected, new ParallelOptions()

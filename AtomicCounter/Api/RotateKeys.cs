@@ -1,13 +1,11 @@
-using System;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
 {
@@ -26,22 +24,11 @@ namespace AtomicCounter.Api
 
             return await Authorization.AuthorizeUserAndExecute(req, async (user) =>
             {
-                try
-                {
-                    var result = await AppStorage.RotateKeysAsync(user, tenant, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
+                var result = await AppStorage.RotateKeysAsync(user, tenant, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
 
-                    if (result == null)
-                    {
-                        return new NotFoundResult();
-                    }
+                if (result == null) return new NotFoundResult();
 
-                    return new OkObjectResult(result);
-
-                }
-                catch (Exception)
-                {
-                    return new NotFoundResult();
-                }
+                return new OkObjectResult(result);
             });
         }
     }

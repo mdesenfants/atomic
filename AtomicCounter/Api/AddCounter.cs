@@ -26,17 +26,8 @@ namespace AtomicCounter.Api
                 req,
                 async user =>
                 {
-                    try
-                    {
-                        var client = new CounterStorage(tenant, app, counter, log);
-                        await client.CreateCounterAsync(user);
-
-                        return new CreatedAtRouteResult(req.Path, 0);
-                    }
-                    catch
-                    {
-                        return new UnauthorizedResult();
-                    }
+                    await AppStorage.CreateCounterAsync(user, tenant, app, counter, log);
+                    return new CreatedAtRouteResult(req.Path, 0);
                 });
         }
     }

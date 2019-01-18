@@ -15,53 +15,67 @@ namespace AtomicCounter
     {
         public async Task<IActionResult> AuthorizeAppAndExecute(HttpRequest req, KeyMode mode, string tenant, Func<Task<IActionResult>> action)
         {
-            var key = req.Query["key"].FirstOrDefault();
+            try
+            {
+                var key = req.Query["key"].FirstOrDefault();
 
-            if (key == null)
+                if (key == null)
+                {
+                    return new UnauthorizedResult();
+                }
+
+                var existing = await AppStorage.GetTenantAsync(tenant);
+
+                if (existing == null)
+                {
+                    return new NotFoundObjectResult($"No existing tenant named {tenant}.");
+                }
+
+                IEnumerable<string> target = null;
+                switch (mode)
+                {
+                    case KeyMode.Read:
+                        target = existing.ReadKeys;
+                        break;
+                    case KeyMode.Write:
+                        target = existing.WriteKeys;
+                        break;
+                    case KeyMode.Duplex:
+                        throw new NotImplementedException();
+                }
+
+                if (!target.Any(x => AuthorizationHelpers.CombineAndHash(tenant, x) == key))
+                {
+                    return new UnauthorizedResult();
+                }
+
+                return await action();
+            }
+            catch
             {
                 return new UnauthorizedResult();
             }
-
-            var existing = await AppStorage.GetTenantAsync(tenant);
-
-            if (existing == null)
-            {
-                return new NotFoundObjectResult($"No existing tenant named {tenant}.");
-            }
-
-            IEnumerable<string> target = null;
-            switch (mode)
-            {
-                case KeyMode.Read:
-                    target = existing.ReadKeys;
-                    break;
-                case KeyMode.Write:
-                    target = existing.WriteKeys;
-                    break;
-                case KeyMode.Duplex:
-                    throw new NotImplementedException();
-            }
-
-            if (!target.Any(x => AuthorizationHelpers.CombineAndHash(tenant, x) == key))
-            {
-                return new UnauthorizedResult();
-            }
-
-            return await action();
         }
 
         public async Task<IActionResult> AuthorizeUserAndExecute(HttpRequest req, Func<UserProfile, Task<IActionResult>> action)
         {
-            var authenticated = Thread.CurrentPrincipal?.Identity?.IsAuthenticated ?? false;
-            if (authenticated)
+            try
+            {
+                var authenticated = Thread.CurrentPrincipal?.Identity?.IsAuthenticated ?? false;
+                if (authenticated)
+                {
+                    return new UnauthorizedResult();
+                }
+
+                var authInfo = await req?.GetAuthInfoAsync();
+                var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
+
+                return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));
+            }
+            catch (UnauthorizedAccessException)
             {
                 return new UnauthorizedResult();
             }
-
-            var authInfo = await req?.GetAuthInfoAsync();
-            var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
-
-            return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));
         }
     }
 }

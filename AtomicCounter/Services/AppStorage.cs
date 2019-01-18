@@ -26,11 +26,6 @@ namespace AtomicCounter.Services
             {
                 var info = GetTenantAsync(profile, tenant);
 
-                if (info == null)
-                {
-                    throw new UnauthorizedAccessException();
-                }
-
                 var counterClient = new CounterStorage(tenant, app, counter, logger);
                 var table = counterClient.GetCounterTable();
                 await table.DeleteAsync();
@@ -39,6 +34,7 @@ namespace AtomicCounter.Services
             catch
             {
                 logger.LogWarning($"Cannot reset counter {tenant}/{app}/{counter}.");
+                throw;
             }
         }
 
@@ -262,19 +258,36 @@ namespace AtomicCounter.Services
             await block.UploadTextAsync(JsonConvert.SerializeObject(t));
         }
 
-        public static async Task AddCounterToTenant(UserProfile user, string tenant, string app, string counter)
+        public static async Task CreateCounterAsync(UserProfile user, string tenant, string app, string counter, ILogger logger)
         {
-            var ten = await GetTenantAsync(user, tenant);
+            var record = await GetTenantAsync(user, tenant);
 
-            if (ten == null) throw new UnauthorizedAccessException();
-
-            ten.Counters.Add(new Counter()
+            var tableName = CounterStorage.Tableize(CounterStorage.Sanitize(tenant) + "counts");
+            try
             {
-                App = app,
-                Name = counter
-            });
+                var client = new CounterStorage(tenant, app, counter, logger);
+                var table = client.GetCounterTable();
+                await table.CreateIfNotExistsAsync();
+                var locks = client.GetCounterLockQueue();
+                await locks.CreateIfNotExistsAsync();
 
-            await UpdateTenantAsync(ten);
+                var ten = await GetTenantAsync(user, tenant);
+
+                if (ten == null) throw new UnauthorizedAccessException();
+
+                ten.Counters.Add(new Counter()
+                {
+                    App = app,
+                    Name = counter
+                });
+
+                await UpdateTenantAsync(ten);
+            }
+            catch
+            {
+                logger.LogError($"Could not create table {tableName}");
+                throw;
+            }
         }
 
         static AppStorage()
@@ -288,7 +301,6 @@ namespace AtomicCounter.Services
             var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
             var profilesTask = table.CreateIfNotExistsAsync();
-
 
             var blobClient = Storage.CreateCloudBlobClient();
             var blob = blobClient.GetContainerReference(TenantsKey);

@@ -1,5 +1,4 @@
-﻿using AtomicCounter.Models;
-using AtomicCounter.Models.Events;
+﻿using AtomicCounter.Models.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -101,7 +100,6 @@ namespace AtomicCounter.Services
                 // Retrieve a reference to a container.
                 var queue = queueClient.GetQueueReference(queueName);
 
-                // Create the queue if it doesn't already exist
                 return queue;
             }
             catch
@@ -128,28 +126,7 @@ namespace AtomicCounter.Services
             }
         }
 
-        public async Task CreateCounterAsync(UserProfile user)
-        {
-            var tenant = await AppStorage.GetTenantAsync(user, Tenant);
 
-            if (tenant == null) throw new UnauthorizedAccessException();
-
-            var tableName = Tableize(Sanitize(Tenant) + "counts");
-            try
-            {
-                var table = GetCounterTable();
-                await table.CreateIfNotExistsAsync();
-                var locks = GetCounterLockQueue();
-                await locks.CreateIfNotExistsAsync();
-
-                await AppStorage.AddCounterToTenant(user, Tenant, App, Counter);
-            }
-            catch
-            {
-                logger.LogError($"Could not create table {tableName}");
-                throw;
-            }
-        }
 
         public async Task IncrementAsync(long count = 1)
         {
@@ -248,7 +225,7 @@ namespace AtomicCounter.Services
             }
         }
 
-        
+
     }
 
     public class CountEntity : TableEntity
