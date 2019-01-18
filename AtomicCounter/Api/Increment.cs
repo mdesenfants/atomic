@@ -1,13 +1,11 @@
 using AtomicCounter.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Linq;
-using System.Net;
-using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 
 namespace AtomicCounter.Api
 {
@@ -26,12 +24,15 @@ namespace AtomicCounter.Api
             log.LogInformation($"Incrementing tenant/{tenant}/app/{app}/counter/{counter}/increment");
             var count = GetCount(req);
 
-            return await AuthProvider.AuthorizeAppAndExecute(req, KeyMode.Write, tenant,
-            async () =>
-            {
-                await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
-                return new AcceptedResult();
-            });
+            return await AuthProvider.AuthorizeAppAndExecute(
+                req,
+                KeyMode.Write,
+                tenant,
+                async () =>
+                {
+                    await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
+                    return new AcceptedResult();
+                });
         }
 
         private static long GetCount(HttpRequest req)
