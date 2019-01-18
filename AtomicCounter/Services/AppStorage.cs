@@ -1,8 +1,7 @@
 ﻿using AtomicCounter.Models;
-using AtomicCounter.Models.Events;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using System;
@@ -15,31 +14,37 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
-    public static class AppStorage
+    public class AppStorage
     {
         public const string CountQueueName = "increment-items";
         private const string ProfilesKey = "profiles";
         private const string TenantsKey = "tenants";
 
-        public static async Task SendIncrementEventAsync(string tenant, string app, string counter, long count = 1)
+        public static async Task ResetAsync(UserProfile profile, string tenant, string app, string counter, ILogger logger)
         {
-            var queueClient = storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(CountQueueName);
-
-            var message = new CloudQueueMessage(new IncrementEvent()
+            try
             {
-                App = app,
-                Tenant = tenant,
-                Count = count,
-                Counter = counter
-            }.ToString());
+                var info = GetTenantAsync(profile, tenant);
 
-            await queue.AddMessageAsync(message);
+                if (info == null)
+                {
+                    throw new UnauthorizedAccessException();
+                }
+
+                var counterClient = new CounterStorage(tenant, app, counter, logger);
+                var table = counterClient.GetCounterTable();
+                await table.DeleteAsync();
+                await table.CreateAsync();
+            }
+            catch
+            {
+                logger.LogWarning($"Cannot reset counter {tenant}/{app}/{counter}.");
+            }
         }
 
         public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token)
         {
-            var queueClient = storage.CreateCloudQueueClient();
+            var queueClient = Storage.CreateCloudQueueClient();
             var poison = queueClient.GetQueueReference(CountQueueName + "-poison");
             var queue = queueClient.GetQueueReference(CountQueueName);
 
@@ -120,7 +125,7 @@ namespace AtomicCounter.Services
 
         public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid)
         {
-            var tableClient = storage.CreateCloudTableClient();
+            var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
 
             var refEntity = new ProfileMappingEntity()
@@ -213,6 +218,14 @@ namespace AtomicCounter.Services
         public static async Task<Tenant> GetTenantAsync(UserProfile profile, string tenant)
         {
             var existing = await GetTenantAsync(tenant);
+            if (existing == null)
+            {
+                return null;
+            }
+            else if (!(existing?.Profiles?.Contains(profile.Id) ?? false))
+            {
+                throw new UnauthorizedAccessException($"The specified profile does not have access to tenant {tenant}.");
+            }
 
             return existing?.Profiles?.Contains(profile.Id) ?? false ? existing : null;
         }
@@ -232,13 +245,13 @@ namespace AtomicCounter.Services
 
         private static CloudBlobContainer GetProfileContainer()
         {
-            var blobClient = storage.CreateCloudBlobClient();
+            var blobClient = Storage.CreateCloudBlobClient();
             return blobClient.GetContainerReference(ProfilesKey);
         }
 
         private static CloudBlobContainer GetTenantContainer()
         {
-            var blobClient = storage.CreateCloudBlobClient();
+            var blobClient = Storage.CreateCloudBlobClient();
             return blobClient.GetContainerReference(TenantsKey);
         }
 
@@ -266,24 +279,24 @@ namespace AtomicCounter.Services
 
         static AppStorage()
         {
-            storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+            Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
-            var queueClient = storage.CreateCloudQueueClient();
+            var queueClient = Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(CountQueueName);
             var countQueueTask = queue.CreateIfNotExistsAsync();
 
-            var tableClient = storage.CreateCloudTableClient();
+            var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
             var profilesTask = table.CreateIfNotExistsAsync();
 
 
-            var blobClient = storage.CreateCloudBlobClient();
+            var blobClient = Storage.CreateCloudBlobClient();
             var blob = blobClient.GetContainerReference(TenantsKey);
             var tenantsTask = blob.CreateIfNotExistsAsync();
 
             Task.WaitAll(new[] { countQueueTask, profilesTask, tenantsTask });
         }
 
-        private static readonly CloudStorageAccount storage;
+        public static readonly CloudStorageAccount Storage;
     }
 }

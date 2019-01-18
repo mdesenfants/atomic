@@ -1,4 +1,5 @@
 ﻿using AtomicCounter.Models;
+using AtomicCounter.Models.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -25,6 +26,22 @@ namespace AtomicCounter.Services
             App = app;
             Counter = counter;
             this.logger = logger;
+        }
+
+        public async Task SendIncrementEventAsync(long count = 1)
+        {
+            var queueClient = AppStorage.Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference(AppStorage.CountQueueName);
+
+            var message = new CloudQueueMessage(new IncrementEvent()
+            {
+                App = App,
+                Tenant = Tenant,
+                Count = count,
+                Counter = Counter
+            }.ToString());
+
+            await queue.AddMessageAsync(message);
         }
 
         public static string Sanitize(string input)
@@ -231,26 +248,7 @@ namespace AtomicCounter.Services
             }
         }
 
-        public async Task ResetAsync(UserProfile profile)
-        {
-            try
-            {
-                var tenant = AppStorage.GetTenantAsync(profile, Tenant);
-
-                if (tenant == null)
-                {
-                    throw new UnauthorizedAccessException();
-                }
-
-                var table = GetCounterTable();
-                await table.DeleteAsync();
-                await table.CreateAsync();
-            }
-            catch
-            {
-                logger.LogWarning($"Cannot reset counter {Tenant}/{App}/{Counter}.");
-            }
-        }
+        
     }
 
     public class CountEntity : TableEntity

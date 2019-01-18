@@ -30,7 +30,9 @@ namespace AtomicCounter.Api
                 tenant,
                 async () =>
                 {
-                    await AppStorage.SendIncrementEventAsync(tenant, app, counter, count);
+                    await new CounterStorage(tenant, app, counter, log)
+                        .SendIncrementEventAsync(count);
+
                     return new AcceptedResult();
                 });
         }

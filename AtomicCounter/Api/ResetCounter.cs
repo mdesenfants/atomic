@@ -24,8 +24,7 @@ namespace AtomicCounter.Api
 
             return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
             {
-                var storage = new CounterStorage(tenant, app, counter, log);
-                await storage.ResetAsync(profile);
+                await AppStorage.ResetAsync(profile, tenant, app, counter, log);
                 return new AcceptedResult();
             });
         }
