@@ -64,6 +64,18 @@ export class AtomicCounterClient {
             }).then(t => t.json());
         });
     }
+    createCounter(tenant, app, counter) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${encodeURI(tenant)}/app/${encodeURI(app)}/counter/${encodeURI(counter)}`, {
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "X-ZUMO-AUTH": this.token
+                },
+                method: "POST"
+            });
+        });
+    }
     increment(tenant, app, counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
             if (!this.tenants) {

@@ -72,6 +72,17 @@ export class AtomicCounterClient {
         }).then(t => t.json() as unknown as ITenant);
     }
 
+    public async createCounter(tenant: string, app: string, counter: string): Promise<void> {
+        await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${encodeURI(tenant)}/app/${encodeURI(app)}/counter/${encodeURI(counter)}`, {
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-ZUMO-AUTH": this.token
+            },
+            method: "POST"
+        });
+    }
+
     public async increment(tenant: string, app: string, counter: string): Promise<void> {
         if (!this.tenants) {
             this.tenants = [await this.getTenant(tenant)];

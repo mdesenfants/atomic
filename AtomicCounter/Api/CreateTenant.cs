@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
 {
-    public static class AddTenant
+    public static class CreateTenant
     {
         public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
 
-        [FunctionName("AddTenant")]
+        [FunctionName(nameof(CreateTenant))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}")]HttpRequest req,
             string tenant,

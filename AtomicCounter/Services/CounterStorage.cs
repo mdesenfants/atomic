@@ -71,7 +71,7 @@ namespace AtomicCounter.Services
 
         public async Task CreateCounterLockQueue()
         {
-            var queueName = $"count-{Sanitize(Tenant)}-{Sanitize(CountPartition)}";
+            var queueName = GetLockQueueName();
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
@@ -89,9 +89,14 @@ namespace AtomicCounter.Services
             }
         }
 
+        private string GetLockQueueName()
+        {
+            return $"count-{Sanitize(Tenant)}-{Sanitize(CountPartition)}";
+        }
+
         internal CloudQueue GetCounterLockQueue()
         {
-            var queueName = $"count-{Sanitize(Tenant)}-{Sanitize(CountPartition)}";
+            var queueName = GetLockQueueName();
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
@@ -125,9 +130,7 @@ namespace AtomicCounter.Services
                 throw;
             }
         }
-
-
-
+        
         public async Task IncrementAsync(long count = 1)
         {
             var locks = GetCounterLockQueue();
@@ -224,8 +227,6 @@ namespace AtomicCounter.Services
                 return 0;
             }
         }
-
-
     }
 
     public class CountEntity : TableEntity

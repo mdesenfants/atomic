@@ -13,6 +13,7 @@ export declare class AtomicCounterClient {
     constructor(authToken: string);
     createTenant(tenant: string): Promise<ITenant>;
     getTenant(tenant: string): Promise<ITenant>;
+    createCounter(tenant: string, app: string, counter: string): Promise<void>;
     increment(tenant: string, app: string, counter: string): Promise<void>;
     count(tenant: string, app: string, counter: string): Promise<number>;
     reset(tenant: string, app: string, counter: string): Promise<void>;

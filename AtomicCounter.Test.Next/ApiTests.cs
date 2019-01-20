@@ -46,9 +46,9 @@ namespace AtomicCounter.Test
             var getTenantViewModel = await GetExistingTenant(mockAuth, req, logger, tenantViewModel);
 
             // Add counter to tenant
-            AddCounter.AuthProvider = mockAuth.Object;
+            CreateCounter.AuthProvider = mockAuth.Object;
             req.Method = "POST";
-            var res = await AddCounter.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+            var res = await CreateCounter.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
             Assert.IsNotNull(res as CreatedAtRouteResult);
 
             // Increment counter
@@ -90,8 +90,8 @@ namespace AtomicCounter.Test
 
         private static async Task<TenantViewModel> AddTenant(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
         {
-            Api.AddTenant.AuthProvider = mockAuth.Object;
-            var result = await Api.AddTenant.Run(req, Initialize.Tenant, logger);
+            CreateTenant.AuthProvider = mockAuth.Object;
+            var result = await CreateTenant.Run(req, Initialize.Tenant, logger);
             var content = (OkObjectResult)result;
             var tenantViewModel = (TenantViewModel)content.Value;
 

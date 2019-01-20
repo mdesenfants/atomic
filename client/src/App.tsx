@@ -64,6 +64,7 @@ class App extends React.Component<{}, IAppState> {
 
     private async increment(): Promise<void> {
         if (this.state.client) {
+            this.state.client.createCounter("bill", "bill", "bill");
             this.state.client.increment("bill", "bill", "bill");
         }
     }

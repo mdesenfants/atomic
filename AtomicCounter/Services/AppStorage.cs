@@ -51,7 +51,10 @@ namespace AtomicCounter.Services
 
                 async Task<bool> canContinue()
                 {
-                    if (token.IsCancellationRequested) return false;
+                    if (token.IsCancellationRequested)
+                    {
+                        return false;
+                    }
 
                     await poison.FetchAttributesAsync();
                     return queue.ApproximateMessageCount.HasValue && queue.ApproximateMessageCount > 0;
@@ -67,7 +70,10 @@ namespace AtomicCounter.Services
 
                     foreach (var message in messages)
                     {
-                        if (message == null) continue;
+                        if (message == null)
+                        {
+                            continue;
+                        }
 
                         retval++;
                         await poison.DeleteMessageAsync(message);
@@ -267,13 +273,18 @@ namespace AtomicCounter.Services
             {
                 var client = new CounterStorage(tenant, app, counter, logger);
                 var table = client.GetCounterTable();
-                await table.CreateIfNotExistsAsync();
+                var task1 = table.CreateIfNotExistsAsync();
                 var locks = client.GetCounterLockQueue();
-                await locks.CreateIfNotExistsAsync();
+                var task2 = locks.CreateIfNotExistsAsync();
+
+                await Task.Run(() => Task.WaitAll(new[] { task1, task2 }));
 
                 var ten = await GetTenantAsync(user, tenant);
 
-                if (ten == null) throw new UnauthorizedAccessException();
+                if (ten == null)
+                {
+                    throw new UnauthorizedAccessException();
+                }
 
                 ten.Counters.Add(new Counter()
                 {
