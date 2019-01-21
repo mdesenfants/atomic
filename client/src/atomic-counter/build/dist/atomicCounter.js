@@ -1,7 +1,7 @@
 import * as tslib_1 from "tslib";
-export function increment(tenant, app, counter, key) {
+export function increment(counter, key) {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
-        yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/increment?key=${key}`, {
+        yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/increment?key=${key}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
@@ -10,9 +10,9 @@ export function increment(tenant, app, counter, key) {
         });
     });
 }
-export function count(tenant, app, counter, key) {
+export function count(counter, key) {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
-        return yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/count?key=${key}`, {
+        return yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/count?key=${key}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
@@ -21,9 +21,9 @@ export function count(tenant, app, counter, key) {
         }).then(v => v.json());
     });
 }
-export function getAuthToken(token) {
+export function getAuthToken(token, provider) {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
-        const response = yield fetch("https://atomiccounter.azurewebsites.net/.auth/login/google", {
+        const response = yield fetch(`https://atomiccounter.azurewebsites.net/.auth/login/${provider}`, {
             body: JSON.stringify({
                 id_token: token
             }),
@@ -40,9 +40,9 @@ export class AtomicCounterClient {
     constructor(authToken) {
         this.token = authToken;
     }
-    createTenant(tenant) {
+    createCounter(counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
+            return yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
@@ -52,9 +52,9 @@ export class AtomicCounterClient {
             }).then(t => t.json());
         });
     }
-    getTenant(tenant) {
+    getCounter(counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            return yield fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
+            return yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
@@ -64,39 +64,23 @@ export class AtomicCounterClient {
             }).then(t => t.json());
         });
     }
-    createCounter(tenant, app, counter) {
+    increment(counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${encodeURI(tenant)}/app/${encodeURI(app)}/counter/${encodeURI(counter)}`, {
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": this.token
-                },
-                method: "POST"
-            });
+            const meta = yield this.getCounter(counter);
+            const key = meta.writeKeys[0];
+            yield increment(counter, key);
         });
     }
-    increment(tenant, app, counter) {
+    count(counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            if (!this.tenants) {
-                this.tenants = [yield this.getTenant(tenant)];
-            }
-            const key = this.tenants.filter(t => t.tenantName === tenant)[0].writeKeys[0];
-            yield increment(tenant, app, counter, key);
+            const meta = yield this.getCounter(counter);
+            const key = meta.readKeys[0];
+            return yield count(counter, key).catch(() => 0);
         });
     }
-    count(tenant, app, counter) {
+    reset(counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            if (!this.tenants) {
-                this.tenants = [yield this.getTenant(tenant)];
-            }
-            const key = this.tenants.filter(t => t.tenantName === tenant)[0].readKeys[0];
-            return yield count(tenant, app, counter, key).catch(() => 0);
-        });
-    }
-    reset(tenant, app, counter) {
-        return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            yield fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}`, {
+            yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}`, {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",

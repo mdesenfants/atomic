@@ -1,9 +1,11 @@
 import * as hello from 'hellojs';
 import * as React from 'react';
 import './App.css';
+
 import { AtomicCounterClient, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
+import { Counter } from './Counter';
+
 import GoogleLogin from './GoogleLogin';
-import Tenant from './Tenant';
 
 import logo from './logo.svg';
 
@@ -25,7 +27,7 @@ class App extends React.Component<{}, IAppState> {
 
     public render() {
         const callback = (value: any) => {
-            getAuthToken(value).then(t => this.setState({ client: new AtomicCounterClient(t) }));
+            getAuthToken(value, 'google').then(t => this.setState({ client: new AtomicCounterClient(t) }));
         };
 
         const inc = this.increment.bind(this);
@@ -37,7 +39,7 @@ class App extends React.Component<{}, IAppState> {
                     <img src={logo} className="App-logo" alt="logo" />
                     <h1 className="App-title">Atomic Counter</h1>
                 </header>
-                {this.state.client ? <Tenant client={this.state.client} /> : null}
+                {this.state.client ? <Counter client={this.state.client} /> : null}
                 <p className="App-intro">
                     {this.state.count}
                 </p>
@@ -51,18 +53,18 @@ class App extends React.Component<{}, IAppState> {
     private async increment(): Promise<void> {
         if (this.state.client) {
             try {
-                await this.state.client.createCounter("bill", "bill", "bill");
+                await this.state.client.createCounter("bill");
             } catch {
                 //
             }
 
-            await this.state.client.increment("bill", "bill", "bill");
+            await this.state.client.increment("bill");
         }
     }
 
     private async reset(): Promise<void> {
         if (this.state.client) {
-            await this.state.client.reset("bill", "bill", "bill");
+            await this.state.client.reset("bill");
         }
     }
 }

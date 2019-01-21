@@ -65,7 +65,7 @@
           })
         }).then(response =>
           response.json().then(value => {
-            fetch("https://atomiccounter.azurewebsites.net/api/tenant/bill", {
+            fetch("https://atomiccounter.azurewebsites.net/api/counter/bill", {
               method: "GET",
               headers: {
                 "X-ZUMO-AUTH": value.authenticationToken,

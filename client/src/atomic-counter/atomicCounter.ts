@@ -1,12 +1,12 @@
-export interface ITenant {
-    tenantName: string;
+export interface ICounter {
+    counterName: string;
     origins: string[];
     writeKeys: string[];
     readKeys: string[];
 }
 
-export async function increment(tenant: string, app: string, counter: string, key: string): Promise<void> {
-    await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/increment?key=${key}`, {
+export async function increment(counter: string, key: string): Promise<void> {
+    await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/increment?key=${key}`, {
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -15,8 +15,8 @@ export async function increment(tenant: string, app: string, counter: string, ke
     });
 }
 
-export async function count(tenant: string, app: string, counter: string, key: string): Promise<number> {
-    return await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}/count?key=${key}`, {
+export async function count(counter: string, key: string): Promise<number> {
+    return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/count?key=${key}`, {
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -25,8 +25,8 @@ export async function count(tenant: string, app: string, counter: string, key: s
     }).then(v => v.json() as unknown as number);
 }
 
-export async function getAuthToken(token: string): Promise<string> {
-    const response = await fetch("https://atomiccounter.azurewebsites.net/.auth/login/google", {
+export async function getAuthToken(token: string, provider: string): Promise<string> {
+    const response = await fetch(`https://atomiccounter.azurewebsites.net/.auth/login/${provider}`, {
         body: JSON.stringify({
             id_token: token
         }),
@@ -44,67 +44,46 @@ export async function getAuthToken(token: string): Promise<string> {
 export class AtomicCounterClient {
     private token: string;
 
-    private tenants: ITenant[];
-
     constructor(authToken: string) {
         this.token = authToken;
     }
 
-    public async createTenant(tenant: string) {
-        return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
+    public async createCounter(counter: string) {
+        return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 "X-ZUMO-AUTH": this.token
             },
             method: "POST"
-        }).then(t => t.json() as unknown as ITenant);
+        }).then(t => t.json() as unknown as ICounter);
     }
 
-    public async getTenant(tenant: string) {
-        return await fetch("https://atomiccounter.azurewebsites.net/api/tenant/" + encodeURI(tenant), {
+    public async getCounter(counter: string) {
+        return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 "X-ZUMO-AUTH": this.token
             },
             method: "GET",
-        }).then(t => t.json() as unknown as ITenant);
+        }).then(t => t.json() as unknown as ICounter);
     }
 
-    public async createCounter(tenant: string, app: string, counter: string): Promise<void> {
-        await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${encodeURI(tenant)}/app/${encodeURI(app)}/counter/${encodeURI(counter)}`, {
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "X-ZUMO-AUTH": this.token
-            },
-            method: "POST"
-        });
+    public async increment(counter: string): Promise<void> {
+        const meta = await this.getCounter(counter);
+        const key = meta.writeKeys[0];
+        await increment(counter, key);
     }
 
-    public async increment(tenant: string, app: string, counter: string): Promise<void> {
-        if (!this.tenants) {
-            this.tenants = [await this.getTenant(tenant)];
-        }
-
-        const key = this.tenants.filter(t => t.tenantName === tenant)[0].writeKeys[0];
-
-        await increment(tenant, app, counter, key);
+    public async count(counter: string): Promise<number> {
+        const meta = await this.getCounter(counter);
+        const key = meta.readKeys[0];
+        return await count(counter, key).catch(() => 0);
     }
 
-    public async count(tenant: string, app: string, counter: string): Promise<number> {
-        if (!this.tenants) {
-            this.tenants = [await this.getTenant(tenant)];
-        }
-
-        const key = this.tenants.filter(t => t.tenantName === tenant)[0].readKeys[0];
-
-        return await count(tenant, app, counter, key).catch(() => 0);
-    }
-
-    public async reset(tenant: string, app: string, counter: string): Promise<void> {
-        await fetch(`https://atomiccounter.azurewebsites.net/api/tenant/${tenant}/app/${app}/counter/${counter}`, {
+    public async reset(counter: string): Promise<void> {
+        await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
