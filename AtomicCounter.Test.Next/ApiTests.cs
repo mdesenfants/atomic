@@ -39,104 +39,104 @@ namespace AtomicCounter.Test
 
             var logger = new TestLogger();
 
-            // Add a tenant
-            var tenantViewModel = await AddTenant(mockAuth, req, logger);
+            // Add a counter
+            var counterViewModel = await AddCounter(mockAuth, req, logger);
 
-            // Get existing tenant
-            var getTenantViewModel = await GetExistingTenant(mockAuth, req, logger, tenantViewModel);
+            // Get existing counter
+            var getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
 
-            // Add counter to tenant
+            // Add counter to counter
             CreateCounter.AuthProvider = mockAuth.Object;
             req.Method = "POST";
-            var res = await CreateCounter.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+            var res = await CreateCounter.Run(req, Initialize.Counter, logger);
             Assert.IsNotNull(res as CreatedAtRouteResult);
 
             // Increment counter
-            await Increment(mockAuth, req, logger, getTenantViewModel);
+            await Increment(mockAuth, req, logger, getCounterViewModel);
 
             // Handle count event
             await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
-            await GetCount(mockAuth, req, logger, getTenantViewModel, 3);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3);
 
             // Rotate read keys
-            await RotateReadKeys(mockAuth, req, logger, getTenantViewModel, 1);
+            await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1);
 
             // Rotate write keys
-            await RotateWriteKeys(mockAuth, req, logger, getTenantViewModel, 1);
+            await RotateWriteKeys(mockAuth, req, logger, getCounterViewModel, 1);
 
             // Rotate read keys again
-            await RotateReadKeys(mockAuth, req, logger, getTenantViewModel, 0);
+            await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 0);
 
             // Rotate write keys again
-            await RotateWriteKeys(mockAuth, req, logger, getTenantViewModel, 0);
+            await RotateWriteKeys(mockAuth, req, logger, getCounterViewModel, 0);
 
             // Increment counter
-            await Increment(mockAuth, req, logger, getTenantViewModel);
+            await Increment(mockAuth, req, logger, getCounterViewModel);
 
             // Handle count event
             await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
-            await GetCount(mockAuth, req, logger, getTenantViewModel, 5);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 5);
 
             // Should reset count to zero
             await RunResetCounter(mockAuth, req, logger);
 
             // Makes sure counter was reset
-            await GetCount(mockAuth, req, logger, getTenantViewModel, 0);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 0);
         }
 
-        private static async Task<TenantViewModel> AddTenant(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
+        private static async Task<CounterViewModel> AddCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
         {
-            CreateTenant.AuthProvider = mockAuth.Object;
-            var result = await CreateTenant.Run(req, Initialize.Tenant, logger);
+            CreateCounter.AuthProvider = mockAuth.Object;
+            var result = await CreateCounter.Run(req, Initialize.Counter, logger);
             var content = (OkObjectResult)result;
-            var tenantViewModel = (TenantViewModel)content.Value;
+            var counterViewModel = (CounterViewModel)content.Value;
 
-            Assert.IsNotNull(tenantViewModel);
-            Assert.IsNotNull(tenantViewModel.ReadKeys);
-            Assert.IsNotNull(tenantViewModel.WriteKeys);
-            Assert.AreEqual(2, tenantViewModel.ReadKeys.Count());
-            Assert.AreEqual(2, tenantViewModel.WriteKeys.Count());
-            Assert.AreEqual(Initialize.Tenant, tenantViewModel.TenantName);
-            return tenantViewModel;
+            Assert.IsNotNull(counterViewModel);
+            Assert.IsNotNull(counterViewModel.ReadKeys);
+            Assert.IsNotNull(counterViewModel.WriteKeys);
+            Assert.AreEqual(2, counterViewModel.ReadKeys.Count());
+            Assert.AreEqual(2, counterViewModel.WriteKeys.Count());
+            Assert.AreEqual(Initialize.Counter, counterViewModel.CounterName);
+            return counterViewModel;
         }
 
-        private static async Task<TenantViewModel> GetExistingTenant(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger, TenantViewModel tenantViewModel)
+        private static async Task<CounterViewModel> GetExistingCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger, CounterViewModel counterViewModel)
         {
-            GetTenant.AuthProvider = mockAuth.Object;
+            GetCounter.AuthProvider = mockAuth.Object;
             req.Method = "GET";
-            var getTenantResult = (OkObjectResult)await GetTenant.Run(req, Initialize.Tenant, logger);
-            var getTenantViewModel = (TenantViewModel)getTenantResult.Value;
+            var getCounterResult = (OkObjectResult)await GetCounter.Run(req, Initialize.Counter, logger);
+            var getCounterViewModel = (CounterViewModel)getCounterResult.Value;
 
-            Assert.IsNotNull(getTenantViewModel);
-            Assert.IsNotNull(getTenantViewModel.ReadKeys);
-            Assert.IsNotNull(getTenantViewModel.WriteKeys);
-            Assert.AreEqual(tenantViewModel.ReadKeys.Count(), getTenantViewModel.ReadKeys.Count());
-            Assert.AreEqual(tenantViewModel.WriteKeys.Count(), getTenantViewModel.WriteKeys.Count());
-            Assert.AreEqual(Initialize.Tenant, getTenantViewModel.TenantName);
-            return getTenantViewModel;
+            Assert.IsNotNull(getCounterViewModel);
+            Assert.IsNotNull(getCounterViewModel.ReadKeys);
+            Assert.IsNotNull(getCounterViewModel.WriteKeys);
+            Assert.AreEqual(counterViewModel.ReadKeys.Count(), getCounterViewModel.ReadKeys.Count());
+            Assert.AreEqual(counterViewModel.WriteKeys.Count(), getCounterViewModel.WriteKeys.Count());
+            Assert.AreEqual(Initialize.Counter, getCounterViewModel.CounterName);
+            return getCounterViewModel;
         }
 
         private async Task RunResetCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
         {
             ResetCounter.AuthProvider = mockAuth.Object;
             req.Method = "DELETE";
-            var resetResult = (AcceptedResult)await ResetCounter.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+            var resetResult = (AcceptedResult)await ResetCounter.Run(req, Initialize.Counter, logger);
             Assert.IsNotNull(resetResult);
         }
 
-        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, long expected)
+        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected)
         {
             Count.AuthProvider = mockAuth.Object;
             req.Method = "GET";
             var iteration = 1;
-            foreach (var key in getTenantViewModel.ReadKeys)
+            foreach (var key in getCounterViewModel.ReadKeys)
             {
                 req.QueryString = new QueryString("?key=" + key);
-                var countResult = (OkObjectResult)await Count.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+                var countResult = (OkObjectResult)await Count.Run(req, Initialize.Counter, logger);
                 var finalCount = (long)countResult.Value;
                 Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
                 iteration++;
@@ -156,40 +156,40 @@ namespace AtomicCounter.Test
             }
         }
 
-        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel)
+        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel)
         {
             Api.Increment.AuthProvider = mockAuth.Object;
             req.Method = "POST";
             var defaultHasRun = false;
-            foreach (var key in getTenantViewModel.WriteKeys)
+            foreach (var key in getCounterViewModel.WriteKeys)
             {
                 var modifier = defaultHasRun ? "" : "&count=2";
                 req.QueryString = new QueryString($"?key={key}{modifier}");
-                var incrementResult = (AcceptedResult)await AtomicCounter.Api.Increment.Run(req, Initialize.Tenant, Initialize.App, Initialize.Counter, logger);
+                var incrementResult = (AcceptedResult)await Api.Increment.Run(req, Initialize.Counter, logger);
                 Assert.IsNotNull(incrementResult);
                 defaultHasRun = true;
             }
         }
 
-        private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
+        private static async Task RotateReadKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
             req.Method = "POST";
-            var readRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Tenant, "read", logger);
+            var readRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Counter, "read", logger);
             var readKeys = (string[])readRotateResult.Value;
             Assert.AreEqual(2, readKeys.Length);
-            var readDupeCount = readKeys.Count(k => getTenantViewModel.ReadKeys.Contains(k));
+            var readDupeCount = readKeys.Count(k => getCounterViewModel.ReadKeys.Contains(k));
             Assert.AreEqual(expected, readDupeCount);
         }
 
-        private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, TenantViewModel getTenantViewModel, int expected)
+        private static async Task RotateWriteKeys(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, int expected)
         {
             RotateKeys.Authorization = mockAuth.Object;
             req.Method = "POST";
-            var writeRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Tenant, "write", logger);
+            var writeRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Counter, "write", logger);
             var writeKeys = (string[])writeRotateResult.Value;
             Assert.AreEqual(2, writeKeys.Length);
-            var writeDupeCount = writeKeys.Count(k => getTenantViewModel.WriteKeys.Contains(k));
+            var writeDupeCount = writeKeys.Count(k => getCounterViewModel.WriteKeys.Contains(k));
             Assert.AreEqual(expected, writeDupeCount);
         }
 
@@ -211,7 +211,7 @@ namespace AtomicCounter.Test
                     m.AuthorizeAppAndExecute(
                         It.IsAny<HttpRequest>(),
                         It.IsAny<KeyMode>(),
-                        Initialize.Tenant,
+                        Initialize.Counter,
                         It.IsAny<AppAuthDelegate>()))
                 .Returns<HttpRequest, KeyMode, string, AppAuthDelegate>((a, b, c, d) => d());
 

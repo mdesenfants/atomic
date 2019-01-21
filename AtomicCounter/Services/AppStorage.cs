@@ -17,23 +17,23 @@ namespace AtomicCounter.Services
     public class AppStorage
     {
         public const string CountQueueName = "increment-items";
-        private const string ProfilesKey = "profiles";
-        private const string TenantsKey = "tenants";
+        public const string ProfilesKey = "profiles";
+        public const string CountersKey = "counters";
 
-        public static async Task ResetAsync(UserProfile profile, string tenant, string app, string counter, ILogger logger)
+        public static async Task ResetAsync(UserProfile profile, string counter, ILogger logger)
         {
             try
             {
-                var info = GetTenantAsync(profile, tenant);
+                var info = GetCounterMetadataAsync(profile, counter);
 
-                var counterClient = new CounterStorage(tenant, app, counter, logger);
+                var counterClient = new CountStorage(counter, logger);
                 var table = counterClient.GetCounterTable();
                 await table.DeleteAsync();
                 await table.CreateAsync();
             }
             catch
             {
-                logger.LogWarning($"Cannot reset counter {tenant}/{app}/{counter}.");
+                logger.LogWarning($"Cannot reset counter {counter}.");
                 throw;
             }
         }
@@ -85,13 +85,13 @@ namespace AtomicCounter.Services
             return retval;
         }
 
-        internal static async Task<string[]> RotateKeysAsync(UserProfile user, string tenant, KeyMode mode)
+        internal static async Task<string[]> RotateKeysAsync(UserProfile user, string counter, KeyMode mode)
         {
-            var result = await GetTenantAsync(user, tenant);
+            var result = await GetCounterMetadataAsync(user, counter);
 
             if (result == null)
             {
-                throw new InvalidOperationException($"Could not find tenant {tenant}.");
+                throw new InvalidOperationException($"Could not find counter {counter}.");
             }
 
             string[] keys = null;
@@ -117,12 +117,12 @@ namespace AtomicCounter.Services
                     return null;
             }
 
-            var blob = GetTenantContainer();
-            var block = blob.GetBlockBlobReference(tenant);
+            var blob = GetCounterMetadataContainer();
+            var block = blob.GetBlockBlobReference(counter);
 
             await block.UploadTextAsync(JsonConvert.SerializeObject(result));
 
-            return keys.Select(x => AuthorizationHelpers.CombineAndHash(tenant, x)).ToArray();
+            return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter, x)).ToArray();
         }
 
         public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid)
@@ -166,35 +166,59 @@ namespace AtomicCounter.Services
             await block.UploadTextAsync(JsonConvert.SerializeObject(profile));
         }
 
-        public static async Task<Tenant> GetOrCreateTenantAsync(UserProfile profile, string tenant)
+        public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
         {
-            var blob = GetTenantContainer();
-            var block = blob.GetBlockBlobReference(tenant);
+            var blob = GetCounterMetadataContainer();
+            var block = blob.GetBlockBlobReference(counter);
 
             if (await block.ExistsAsync())
             {
-                var existing = JsonConvert.DeserializeObject<Tenant>(await block.DownloadTextAsync());
-
+                var existing = JsonConvert.DeserializeObject<Counter>(await block.DownloadTextAsync());
                 return existing.Profiles.Contains(profile.Id) ? existing : null;
             }
             else
             {
-                var newTenant = new Tenant() { TenantName = tenant };
-                newTenant.Profiles.Add(profile.Id);
+                var newCounter = new Counter() { CounterName = counter };
+                newCounter.Profiles.Add(profile.Id);
 
                 for (var i = 0; i < 2; i++)
                 {
-                    newTenant.ReadKeys.Add(RandomString());
+                    newCounter.ReadKeys.Add(RandomString());
                 }
 
                 for (var i = 0; i < 2; i++)
                 {
-                    newTenant.WriteKeys.Add(RandomString());
+                    newCounter.WriteKeys.Add(RandomString());
                 }
 
-                await block.UploadTextAsync(JsonConvert.SerializeObject(newTenant));
+                var client = new CountStorage(counter, log);
+                var table = client.GetCounterTable();
+                var locks = client.GetCounterLockQueue();
+                try
+                {
+                    var tasks = new[] {
+                        block.UploadTextAsync(JsonConvert.SerializeObject(newCounter)),
+                        table.CreateIfNotExistsAsync(),
+                        locks.CreateIfNotExistsAsync()
+                    };
 
-                return newTenant;
+                    await Task.Run(() => Task.WaitAll(tasks));
+                }
+                catch
+                {
+                    log.LogError($"Could not create counter {counter}");
+                    var tasks = new[] {
+                        block.DeleteIfExistsAsync(),
+                        table.DeleteIfExistsAsync(),
+                        locks.DeleteIfExistsAsync()
+                    };
+
+                    await Task.Run(() => Task.WaitAll(tasks));
+
+                    throw;
+                }
+
+                return newCounter;
             }
         }
 
@@ -217,29 +241,30 @@ namespace AtomicCounter.Services
             return builder.ToString();
         }
 
-        public static async Task<Tenant> GetTenantAsync(UserProfile profile, string tenant)
+        public static async Task<Counter> GetCounterMetadataAsync(UserProfile profile, string counter)
         {
-            var existing = await GetTenantAsync(tenant);
+            var existing = await GetCounterMetadataAsync(counter);
+
             if (existing == null)
             {
                 return null;
             }
             else if (!(existing?.Profiles?.Contains(profile.Id) ?? false))
             {
-                throw new UnauthorizedAccessException($"The specified profile does not have access to tenant {tenant}.");
+                throw new UnauthorizedAccessException($"The specified profile does not have access to counter {counter}.");
             }
 
             return existing?.Profiles?.Contains(profile.Id) ?? false ? existing : null;
         }
 
-        public static async Task<Tenant> GetTenantAsync(string tenant)
+        public static async Task<Counter> GetCounterMetadataAsync(string counter)
         {
-            var blob = GetTenantContainer();
-            var block = blob.GetBlockBlobReference(tenant);
+            var blob = GetCounterMetadataContainer();
+            var block = blob.GetBlockBlobReference(counter);
 
             if (await block.ExistsAsync())
             {
-                return JsonConvert.DeserializeObject<Tenant>(await block.DownloadTextAsync());
+                return JsonConvert.DeserializeObject<Counter>(await block.DownloadTextAsync());
             }
 
             return null;
@@ -251,54 +276,17 @@ namespace AtomicCounter.Services
             return blobClient.GetContainerReference(ProfilesKey);
         }
 
-        private static CloudBlobContainer GetTenantContainer()
+        private static CloudBlobContainer GetCounterMetadataContainer()
         {
             var blobClient = Storage.CreateCloudBlobClient();
-            return blobClient.GetContainerReference(TenantsKey);
+            return blobClient.GetContainerReference(CountersKey);
         }
 
-        private static async Task UpdateTenantAsync(Tenant t)
+        private static async Task UpdateCounterMetadataAsync(Counter counter)
         {
-            var blob = GetTenantContainer();
-            var block = blob.GetBlockBlobReference(t.TenantName);
-            await block.UploadTextAsync(JsonConvert.SerializeObject(t));
-        }
-
-        public static async Task CreateCounterAsync(UserProfile user, string tenant, string app, string counter, ILogger logger)
-        {
-            var record = await GetTenantAsync(user, tenant);
-
-            var tableName = CounterStorage.Tableize(CounterStorage.Sanitize(tenant) + "counts");
-            try
-            {
-                var client = new CounterStorage(tenant, app, counter, logger);
-                var table = client.GetCounterTable();
-                var task1 = table.CreateIfNotExistsAsync();
-                var locks = client.GetCounterLockQueue();
-                var task2 = locks.CreateIfNotExistsAsync();
-
-                await Task.Run(() => Task.WaitAll(new[] { task1, task2 }));
-
-                var ten = await GetTenantAsync(user, tenant);
-
-                if (ten == null)
-                {
-                    throw new UnauthorizedAccessException();
-                }
-
-                ten.Counters.Add(new Counter()
-                {
-                    App = app,
-                    Name = counter
-                });
-
-                await UpdateTenantAsync(ten);
-            }
-            catch
-            {
-                logger.LogError($"Could not create table {tableName}");
-                throw;
-            }
+            var blob = GetCounterMetadataContainer();
+            var block = blob.GetBlockBlobReference(counter.CounterName);
+            await block.UploadTextAsync(JsonConvert.SerializeObject(counter));
         }
 
         static AppStorage()
@@ -314,10 +302,10 @@ namespace AtomicCounter.Services
             var profilesTask = table.CreateIfNotExistsAsync();
 
             var blobClient = Storage.CreateCloudBlobClient();
-            var blob = blobClient.GetContainerReference(TenantsKey);
-            var tenantsTask = blob.CreateIfNotExistsAsync();
+            var blob = blobClient.GetContainerReference(CountersKey);
+            var countersTask = blob.CreateIfNotExistsAsync();
 
-            Task.WaitAll(new[] { countQueueTask, profilesTask, tenantsTask });
+            Task.WaitAll(new[] { countQueueTask, profilesTask, countersTask });
         }
 
         public static readonly CloudStorageAccount Storage;

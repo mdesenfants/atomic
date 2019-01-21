@@ -9,6 +9,6 @@ namespace AtomicCounter.Models
 
         public string Email { get; set; }
 
-        public IEnumerable<string> Tenants { get; set; } = new List<string>();
+        public IEnumerable<string> Counters { get; set; } = new List<string>();
     }
 }

@@ -20,26 +20,24 @@ namespace AtomicCounter.Test
             var storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
             var queueClient = storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference($"{CounterStorage.Sanitize(testa)}-{CounterStorage.Sanitize(testa)}-{CounterStorage.Sanitize(testa)}");
+            var queue = queueClient.GetQueueReference($"lock-{CountStorage.Sanitize(testa)}");
             await queue.DeleteIfExistsAsync();
 
             var tableClient = storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(CounterStorage.Tableize(testa + "counts"));
+            var table = tableClient.GetTableReference(CountStorage.Tableize(testa));
             await table.DeleteIfExistsAsync();
 
             var blobClient = storage.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference("tenants");
-            await blobClient.GetContainerReference("tenants").GetBlockBlobReference(testa).DeleteIfExistsAsync();
+            var container = blobClient.GetContainerReference(AppStorage.CountersKey);
+            await blobClient.GetContainerReference(AppStorage.CountersKey).GetBlockBlobReference(testa).DeleteIfExistsAsync();
             #endregion
 
             var logger = new TestLogger();
-            var client = new CounterStorage(testa, testa, testa, logger);
+            var client = new CountStorage(testa, logger);
             Assert.AreEqual(0, await client.CountAsync());
 
             var profile = new Models.UserProfile() { Id = Guid.NewGuid() };
-            await AppStorage.GetOrCreateTenantAsync(profile, "testa");
-
-            await AppStorage.CreateCounterAsync(profile, testa, testa, testa, logger);
+            await AppStorage.GetOrCreateCounterAsync(profile, testa, logger);
 
             var expected = 100;
             Parallel.For(0, expected, new ParallelOptions()

@@ -9,9 +9,7 @@ namespace AtomicCounter.Test
     [TestClass]
     public class Initialize
     {
-        public const string Tenant = "test_tenant";
-        public const string App = "test_app";
-        public const string Counter = "test_count";
+        public const string Counter = "test_counter";
 
         public static CloudStorageAccount Storage;
 
@@ -22,18 +20,18 @@ namespace AtomicCounter.Test
             Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
             var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference($"{CounterStorage.Sanitize(Tenant)}-{CounterStorage.Sanitize(App)}-{CounterStorage.Sanitize(Counter)}");
+            var queue = queueClient.GetQueueReference($"lock-{CountStorage.Sanitize(Counter)}");
             await queue.DeleteIfExistsAsync();
             var increments = queueClient.GetQueueReference("increment-items");
             await queue.DeleteIfExistsAsync();
 
             var tableClient = Storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(CounterStorage.Tableize(Tenant+"counts"));
+            var table = tableClient.GetTableReference(CountStorage.Tableize(Counter));
             await table.DeleteIfExistsAsync();
 
             var blobClient = Storage.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference("tenants");
-            await blobClient.GetContainerReference("tenants").GetBlockBlobReference(Tenant).DeleteIfExistsAsync();
+            var container = blobClient.GetContainerReference(AppStorage.CountersKey);
+            await blobClient.GetContainerReference(AppStorage.CountersKey).GetBlockBlobReference(Counter).DeleteIfExistsAsync();
         }
     }
 }

@@ -14,17 +14,15 @@ namespace AtomicCounter.Api
 
         [FunctionName("Count")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tenant/{tenant}/app/{app}/counter/{counter}/count")]HttpRequest req,
-            string tenant,
-            string app,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "counter/{counter}/count")]HttpRequest req,
             string counter,
             ILogger log)
         {
-            log.LogInformation($"Getting a count for tenant/{tenant}/app/{app}/counter/{counter}.");
+            log.LogInformation($"Getting a count for counter/{counter}.");
 
-            return await AuthProvider.AuthorizeAppAndExecute(req, KeyMode.Read, tenant, async () =>
+            return await AuthProvider.AuthorizeAppAndExecute(req, KeyMode.Read, counter, async () =>
             {
-                var storage = new CounterStorage(tenant, app, counter, log);
+                var storage = new CountStorage(counter, log);
                 return new OkObjectResult(await storage.CountAsync());
             });
         }

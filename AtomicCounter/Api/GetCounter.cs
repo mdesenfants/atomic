@@ -10,34 +10,33 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
 {
-    public static class CreateTenant
+    public static class GetCounter
     {
         public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
-
-        [FunctionName(nameof(CreateTenant))]
+        [FunctionName("GetCounter")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}")]HttpRequest req,
-            string tenant,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "counter/{counter}")]HttpRequest req,
+            string counter,
             ILogger log)
         {
-            log.LogInformation("Creating tenant {0}", tenant);
+            log.LogInformation("Getting info for counter {0}", counter);
 
             return await AuthProvider.AuthorizeUserAndExecute(
                 req,
                 async user =>
                 {
-                    var existing = await AppStorage.GetOrCreateTenantAsync(user, tenant);
+                    var existing = await AppStorage.GetCounterMetadataAsync(user, counter);
 
                     if (existing == null) return new NotFoundResult();
 
-                    return new OkObjectResult(new TenantViewModel()
+                    return new OkObjectResult(new CounterViewModel()
                     {
-                        TenantName = existing.TenantName,
+                        CounterName = existing.CounterName,
                         Origins = existing.Origins,
                         ReadKeys = existing.ReadKeys
-                                .Select(x => AuthorizationHelpers.CombineAndHash(existing.TenantName, x)),
+                            .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
                         WriteKeys = existing.WriteKeys
-                                .Select(x => AuthorizationHelpers.CombineAndHash(existing.TenantName, x))
+                            .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
                     });
                 });
         }

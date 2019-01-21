@@ -15,16 +15,16 @@ namespace AtomicCounter.Api
 
         [FunctionName("RotateKeys")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{tenant}/keys/{readorwrite}/rotate")]HttpRequest req,
-            string tenant,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{counter}/keys/{readorwrite}/rotate")]HttpRequest req,
+            string counter,
             string readorwrite,
             ILogger log)
         {
-            log.LogInformation($"Start rotating {readorwrite} keys for {tenant}.");
+            log.LogInformation($"Start rotating {readorwrite} keys for {counter}.");
 
             return await Authorization.AuthorizeUserAndExecute(req, async (user) =>
             {
-                var result = await AppStorage.RotateKeysAsync(user, tenant, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
+                var result = await AppStorage.RotateKeysAsync(user, counter, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
 
                 if (result == null) return new NotFoundResult();
 

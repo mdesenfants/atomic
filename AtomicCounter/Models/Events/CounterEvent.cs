@@ -2,10 +2,8 @@
 
 namespace AtomicCounter.Models.Events
 {
-    public class TenantEvent
+    public class CounterEvent
     {
-        public string Tenant { get; set; }
-        public string App { get; set; }
         public string Counter { get; set; }
 
         public override string ToString()

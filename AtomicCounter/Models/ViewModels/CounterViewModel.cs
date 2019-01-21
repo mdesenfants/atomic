@@ -2,9 +2,9 @@
 
 namespace AtomicCounter.Models.ViewModels
 {
-    public class TenantViewModel
+    public class CounterViewModel
     {
-        public string TenantName { get; set; }
+        public string CounterName { get; set; }
 
         public IEnumerable<string> Origins { get; set; } = new List<string>();
 

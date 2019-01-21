@@ -15,22 +15,20 @@ namespace AtomicCounter.Api
 
         [FunctionName("Increment")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}/app/{app}/counter/{counter}/increment")]HttpRequest req,
-            string tenant,
-            string app,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "counter/{counter}/increment")]HttpRequest req,
             string counter,
             ILogger log)
         {
-            log.LogInformation($"Incrementing tenant/{tenant}/app/{app}/counter/{counter}/increment");
+            log.LogInformation($"Incrementing {counter}.");
             var count = GetCount(req);
 
             return await AuthProvider.AuthorizeAppAndExecute(
                 req,
                 KeyMode.Write,
-                tenant,
+                counter,
                 async () =>
                 {
-                    await new CounterStorage(tenant, app, counter, log)
+                    await new CountStorage(counter, log)
                         .SendIncrementEventAsync(count);
 
                     return new AcceptedResult();

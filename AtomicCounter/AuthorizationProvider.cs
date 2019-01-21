@@ -13,7 +13,7 @@ namespace AtomicCounter
 {
     public class AuthorizationProvider : IAuthorizationProvider
     {
-        public async Task<IActionResult> AuthorizeAppAndExecute(HttpRequest req, KeyMode mode, string tenant, Func<Task<IActionResult>> action)
+        public async Task<IActionResult> AuthorizeAppAndExecute(HttpRequest req, KeyMode mode, string counter, Func<Task<IActionResult>> action)
         {
             try
             {
@@ -24,11 +24,11 @@ namespace AtomicCounter
                     return new UnauthorizedResult();
                 }
 
-                var existing = await AppStorage.GetTenantAsync(tenant);
+                var existing = await AppStorage.GetCounterMetadataAsync(counter);
 
                 if (existing == null)
                 {
-                    return new NotFoundObjectResult($"No existing tenant named {tenant}.");
+                    return new NotFoundObjectResult($"No existing counter named {counter}.");
                 }
 
                 IEnumerable<string> target = null;
@@ -44,7 +44,7 @@ namespace AtomicCounter
                         throw new NotImplementedException();
                 }
 
-                if (!target.Any(x => AuthorizationHelpers.CombineAndHash(tenant, x) == key))
+                if (!target.Any(x => AuthorizationHelpers.CombineAndHash(counter, x) == key))
                 {
                     return new UnauthorizedResult();
                 }

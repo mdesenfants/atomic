@@ -1,9 +1,11 @@
+using AtomicCounter.Models.ViewModels;
 using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AtomicCounter.Api
@@ -14,20 +16,29 @@ namespace AtomicCounter.Api
 
         [FunctionName(nameof(CreateCounter))]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenant}/app/{app}/counter/{counter}")]HttpRequest req,
-            string tenant,
-            string app,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "counter/{counter}")]HttpRequest req,
             string counter,
             ILogger log)
         {
-            log.LogInformation("Creating counter {0}/{1}/{2}", tenant, app, counter);
+            log.LogInformation("Creating counter {0}", counter);
 
             return await AuthProvider.AuthorizeUserAndExecute(
                 req,
                 async user =>
                 {
-                    await AppStorage.CreateCounterAsync(user, tenant, app, counter, log);
-                    return new CreatedAtRouteResult(req.Path, 0);
+                    var existing = await AppStorage.GetOrCreateCounterAsync(user, counter, log);
+
+                    if (existing == null) return new ConflictResult();
+
+                    return new OkObjectResult(new CounterViewModel()
+                    {
+                        CounterName = existing.CounterName,
+                        Origins = existing.Origins,
+                        ReadKeys = existing.ReadKeys
+                                .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
+                        WriteKeys = existing.WriteKeys
+                                .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
+                    });
                 });
         }
     }

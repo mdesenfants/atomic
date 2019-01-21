@@ -9,20 +9,14 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
-    public class CounterStorage
+    public class CountStorage
     {
-        private readonly string Tenant;
-        private readonly string App;
         private readonly string Counter;
-
         private readonly ILogger logger;
+        private const string CountPartition = "counts";
 
-        private string CountPartition => $"{Sanitize(App)}-{Sanitize(Counter)}";
-
-        public CounterStorage(string tenant, string app, string counter, ILogger logger)
+        public CountStorage(string counter, ILogger logger)
         {
-            Tenant = tenant;
-            App = app;
             Counter = counter;
             this.logger = logger;
         }
@@ -34,10 +28,8 @@ namespace AtomicCounter.Services
 
             var message = new CloudQueueMessage(new IncrementEvent()
             {
-                App = App,
-                Tenant = Tenant,
+                Counter = Counter,
                 Count = count,
-                Counter = Counter
             }.ToString());
 
             await queue.AddMessageAsync(message);
@@ -50,23 +42,7 @@ namespace AtomicCounter.Services
 
         public static string Tableize(string input)
         {
-            var value = Sanitize(input);
-            while (value.Length < 3)
-            {
-                value += 'a';
-            }
-
-            if (!char.IsLetter(value[0]))
-            {
-                value = 'a' + value;
-            }
-
-            if (!char.IsLetter(value[value.Length - 1]))
-            {
-                value += 'a';
-            }
-
-            return value;
+            return $"count-{Sanitize(input)}";
         }
 
         public async Task CreateCounterLockQueue()
@@ -91,7 +67,7 @@ namespace AtomicCounter.Services
 
         private string GetLockQueueName()
         {
-            return $"count-{Sanitize(Tenant)}-{CountPartition}";
+            return $"lock-{Sanitize(Counter)}";
         }
 
         internal CloudQueue GetCounterLockQueue()
@@ -115,7 +91,7 @@ namespace AtomicCounter.Services
 
         internal CloudTable GetCounterTable()
         {
-            var tableName = Tableize(Sanitize(Tenant) + "counts");
+            var tableName = Tableize(Counter);
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
@@ -129,7 +105,7 @@ namespace AtomicCounter.Services
                 throw;
             }
         }
-        
+
         public async Task IncrementAsync(long count = 1)
         {
             var locks = GetCounterLockQueue();
@@ -222,7 +198,7 @@ namespace AtomicCounter.Services
             }
             catch
             {
-                logger.LogWarning($"There was a problem counting {Tenant}/{App}/{Counter}. Defaulting to 0.");
+                logger.LogWarning($"There was a problem counting {Counter}. Defaulting to 0.");
                 return 0;
             }
         }

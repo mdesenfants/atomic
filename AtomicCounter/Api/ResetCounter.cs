@@ -14,17 +14,15 @@ namespace AtomicCounter.Api
 
         [FunctionName("ResetCounter")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "tenant/{tenant}/app/{app}/counter/{counter}")]HttpRequest req,
-            string tenant,
-            string app,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "counter/{counter}/reset")]HttpRequest req,
             string counter,
             ILogger log)
         {
-            log.LogInformation($"Resetting {tenant}/{app}/{counter}.");
+            log.LogInformation($"Resetting {counter}.");
 
             return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
             {
-                await AppStorage.ResetAsync(profile, tenant, app, counter, log);
+                await AppStorage.ResetAsync(profile, counter, log);
                 return new AcceptedResult();
             });
         }
