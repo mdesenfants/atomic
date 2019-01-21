@@ -17,7 +17,7 @@ namespace AtomicCounter.Services
 
         private readonly ILogger logger;
 
-        private string CountPartition => $"{App}-{Counter}";
+        private string CountPartition => $"{Sanitize(App)}-{Sanitize(Counter)}";
 
         public CounterStorage(string tenant, string app, string counter, ILogger logger)
         {
@@ -91,25 +91,24 @@ namespace AtomicCounter.Services
 
         private string GetLockQueueName()
         {
-            return $"count-{Sanitize(Tenant)}-{Sanitize(CountPartition)}";
+            return $"count-{Sanitize(Tenant)}-{CountPartition}";
         }
 
         internal CloudQueue GetCounterLockQueue()
         {
-            var queueName = GetLockQueueName();
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
                 var queueClient = storageAccount.CreateCloudQueueClient();
 
                 // Retrieve a reference to a container.
-                var queue = queueClient.GetQueueReference(queueName);
+                var queue = queueClient.GetQueueReference(GetLockQueueName());
 
                 return queue;
             }
             catch
             {
-                logger.LogError($"Could not get counter queue {queueName}.");
+                logger.LogError($"Could not get counter queue {GetLockQueueName()}.");
                 throw;
             }
         }

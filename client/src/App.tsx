@@ -3,6 +3,7 @@ import * as React from 'react';
 import './App.css';
 import { AtomicCounterClient, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
 import GoogleLogin from './GoogleLogin';
+import Tenant from './Tenant';
 
 import logo from './logo.svg';
 
@@ -17,22 +18,9 @@ interface IAppState {
 }
 
 class App extends React.Component<{}, IAppState> {
-
     constructor(props: {}) {
         super(props);
         this.state = { client: null, count: 0, timeoutHandle: null };
-    }
-
-    public componentDidMount() {
-        const handle = setInterval((() => {
-            if (this.state.client) {
-                this.state.client
-                    .count("bill", "bill", "bill")
-                    .then(r => this.setState({ count: r }));
-            }
-        }).bind(this), 1 * 1000);
-
-        this.setState({ timeoutHandle: handle });
     }
 
     public render() {
@@ -49,9 +37,7 @@ class App extends React.Component<{}, IAppState> {
                     <img src={logo} className="App-logo" alt="logo" />
                     <h1 className="App-title">Atomic Counter</h1>
                 </header>
-                <p className="App-intro">
-                    {this.state.client ? "logged in" : null}
-                </p>
+                {this.state.client ? <Tenant client={this.state.client} /> : null}
                 <p className="App-intro">
                     {this.state.count}
                 </p>
@@ -64,14 +50,19 @@ class App extends React.Component<{}, IAppState> {
 
     private async increment(): Promise<void> {
         if (this.state.client) {
-            this.state.client.createCounter("bill", "bill", "bill");
-            this.state.client.increment("bill", "bill", "bill");
+            try {
+                await this.state.client.createCounter("bill", "bill", "bill");
+            } catch {
+                //
+            }
+
+            await this.state.client.increment("bill", "bill", "bill");
         }
     }
 
     private async reset(): Promise<void> {
         if (this.state.client) {
-            this.state.client.reset("bill", "bill", "bill");
+            await this.state.client.reset("bill", "bill", "bill");
         }
     }
 }
