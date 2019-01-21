@@ -46,10 +46,6 @@ namespace AtomicCounter.Test
             var getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
 
             // Add counter to counter
-            CreateCounter.AuthProvider = mockAuth.Object;
-            req.Method = "POST";
-            var res = await CreateCounter.Run(req, Initialize.Counter, logger);
-            Assert.IsNotNull(res as CreatedAtRouteResult);
 
             // Increment counter
             await Increment(mockAuth, req, logger, getCounterViewModel);

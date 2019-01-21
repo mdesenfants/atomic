@@ -42,7 +42,7 @@ namespace AtomicCounter.Services
 
         public static string Tableize(string input)
         {
-            return $"count-{Sanitize(input)}";
+            return $"count{Sanitize(input)}";
         }
 
         public async Task CreateCounterLockQueue()
@@ -72,19 +72,20 @@ namespace AtomicCounter.Services
 
         internal CloudQueue GetCounterLockQueue()
         {
+            var lockQueueName = GetLockQueueName();
             try
             {
                 var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
                 var queueClient = storageAccount.CreateCloudQueueClient();
 
                 // Retrieve a reference to a container.
-                var queue = queueClient.GetQueueReference(GetLockQueueName());
+                var queue = queueClient.GetQueueReference(lockQueueName);
 
                 return queue;
             }
             catch
             {
-                logger.LogError($"Could not get counter queue {GetLockQueueName()}.");
+                logger.LogError($"Could not get counter queue {lockQueueName}.");
                 throw;
             }
         }
