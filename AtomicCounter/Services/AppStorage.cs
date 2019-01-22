@@ -53,35 +53,38 @@ namespace AtomicCounter.Services
             await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
         }
 
-        public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token)
+        public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token, ILogger log)
         {
             var queueClient = Storage.CreateCloudQueueClient();
             var poison = queueClient.GetQueueReference(CountQueueName + "-poison");
             var queue = queueClient.GetQueueReference(CountQueueName);
 
+            log.LogInformation($"Transferring {poison.Name} to {queue.Name}.");
+
             var retval = 0;
             if (await poison.ExistsAsync())
             {
+                log.LogInformation("Found poison queue.");
                 var countSetting = Environment.GetEnvironmentVariable("ResetCount");
 
-                async Task<bool> canContinue()
+                bool canContinue()
                 {
                     if (token.IsCancellationRequested)
                     {
+                        log.LogInformation("Cancellation requested.");
                         return false;
                     }
 
-                    await poison.FetchAttributesAsync();
-                    return queue.ApproximateMessageCount.HasValue && queue.ApproximateMessageCount > 0;
+                    return true;
                 }
 
                 var countSettingValue = !string.IsNullOrWhiteSpace(countSetting) ? int.Parse(countSetting) : 32;
 
-                while (await canContinue())
+                log.LogInformation($"Grabbing maximum {countSettingValue} poinson items per batch.");
+                while (canContinue())
                 {
-                    var maxBatchSize = Math.Min(queue.ApproximateMessageCount.Value, countSettingValue);
-
-                    var messages = await poison.GetMessagesAsync(maxBatchSize);
+                    var messages = await poison.GetMessagesAsync(countSettingValue);
+                    if (messages.Count() == 0) break;
 
                     foreach (var message in messages)
                     {
