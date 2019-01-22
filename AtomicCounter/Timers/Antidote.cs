@@ -19,6 +19,8 @@ namespace AtomicCounter.Timers
         {
             log.LogInformation($"Retrying poison items at {DateTime.Now}.");
 
+            AppStorage.CreateAppStorage();
+
             var total = await AppStorage.RetryPoisonIncrementEventsAsync(token, log);
             
             log.LogInformation($"Resubmitted {total} increment operations from poison queue.");

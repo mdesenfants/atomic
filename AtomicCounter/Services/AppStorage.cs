@@ -105,7 +105,7 @@ namespace AtomicCounter.Services
 
         public static bool CounterNameIsValid(string name)
         {
-            return name.Length <= 58 && name.Length > 0 && !name.Any(c => !char.IsLetterOrDigit(c));
+            return name.Length <= 58 && name.Length > 0 && name.Any(c => !char.IsLetterOrDigit(c));
         }
 
         internal static async Task<string[]> RotateKeysAsync(Counter counter, KeyMode mode)
@@ -311,7 +311,10 @@ namespace AtomicCounter.Services
         static AppStorage()
         {
             Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+        }
 
+        public static void CreateAppStorage()
+        {
             var tasks = new List<Task>();
 
             var queueClient = Storage.CreateCloudQueueClient();

@@ -3,6 +3,7 @@ using AtomicCounter.EventHandlers;
 using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using AtomicCounter.Models.ViewModels;
+using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
+using UserCounterDelegate = System.Func<AtomicCounter.Models.UserProfile, AtomicCounter.Models.Counter, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 
 namespace AtomicCounter.Test
 {
@@ -204,6 +206,17 @@ namespace AtomicCounter.Test
                         It.IsAny<HttpRequest>(),
                         It.IsAny<UserAuthDelegate>()))
                 .Returns<HttpRequest, UserAuthDelegate>((a, b) => b(profile));
+
+            mockAuth
+                .Setup(m =>
+                    m.AuthorizeUserAndExecute(
+                        It.IsAny<HttpRequest>(),
+                        It.IsAny<string>(),
+                        It.IsAny<UserCounterDelegate>()))
+                .Returns<HttpRequest, string, UserCounterDelegate>((a, b, c) => {
+                    var meta = AppStorage.GetCounterMetadataAsync(b).Result;
+                    return c(profile, meta);
+                });
 
             // App auth always passes
             mockAuth
