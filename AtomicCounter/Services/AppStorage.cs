@@ -103,31 +103,34 @@ namespace AtomicCounter.Services
             return retval;
         }
 
-        internal static async Task<string[]> RotateKeysAsync(UserProfile user, string counter, KeyMode mode)
+        public static bool CounterNameIsValid(string name)
         {
-            var result = await GetCounterMetadataAsync(user, counter);
+            return name.Length <= 58 && name.Length > 0 && !name.Any(c => !char.IsLetterOrDigit(c));
+        }
 
-            if (result == null)
+        internal static async Task<string[]> RotateKeysAsync(Counter counter, KeyMode mode)
+        {
+            if (counter == null)
             {
-                throw new InvalidOperationException($"Could not find counter {counter}.");
+                throw new InvalidOperationException($"Could not find counter {counter.CounterName}.");
             }
 
             string[] keys = null;
             switch (mode)
             {
                 case KeyMode.Read:
-                    result.ReadKeys = new List<string> {
+                    counter.ReadKeys = new List<string> {
                         RandomString(),
-                        result.ReadKeys.First()
+                        counter.ReadKeys.First()
                     };
-                    keys = result.ReadKeys.ToArray();
+                    keys = counter.ReadKeys.ToArray();
                     break;
                 case KeyMode.Write:
-                    result.WriteKeys = new List<string> {
+                    counter.WriteKeys = new List<string> {
                         RandomString(),
-                        result.WriteKeys.First()
+                        counter.WriteKeys.First()
                     };
-                    keys = result.WriteKeys.ToArray();
+                    keys = counter.WriteKeys.ToArray();
                     break;
                 case KeyMode.Duplex:
                     throw new NotImplementedException();
@@ -136,11 +139,11 @@ namespace AtomicCounter.Services
             }
 
             var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(counter);
+            var block = blob.GetBlockBlobReference(counter.CounterName);
 
-            await block.UploadTextAsync(JsonConvert.SerializeObject(result));
+            await block.UploadTextAsync(JsonConvert.SerializeObject(counter));
 
-            return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter, x)).ToArray();
+            return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CounterName, x)).ToArray();
         }
 
         public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid)
@@ -186,6 +189,11 @@ namespace AtomicCounter.Services
 
         public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
         {
+            if (!CounterNameIsValid(counter))
+            {
+                throw new InvalidOperationException();
+            }
+
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter);
 

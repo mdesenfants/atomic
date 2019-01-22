@@ -51,6 +51,10 @@ namespace AtomicCounter
 
                 return await action();
             }
+            catch (InvalidOperationException)
+            {
+                return new BadRequestResult();
+            }
             catch
             {
                 return new UnauthorizedResult();
@@ -71,6 +75,40 @@ namespace AtomicCounter
                 var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
 
                 return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));
+            }
+            catch (InvalidOperationException)
+            {
+                return new BadRequestResult();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return new UnauthorizedResult();
+            }
+        }
+
+        public async Task<IActionResult> AuthorizeUserAndExecute(HttpRequest req, string counter, Func<UserProfile, Counter, Task<IActionResult>> action)
+        {
+            try
+            {
+                if (!AppStorage.CounterNameIsValid(counter))
+                {
+                    return new BadRequestResult();
+                }
+
+                return await AuthorizeUserAndExecute(req, async profile =>
+                {
+                    // Throw unauthorized exception here when necessary
+                    var meta = await AppStorage.GetCounterMetadataAsync(profile, counter);
+
+                    if (meta == null) return new NotFoundResult();
+
+                    // Continue with action
+                    return await action(profile, meta);
+                });
+            }
+            catch (InvalidOperationException)
+            {
+                return new BadRequestResult();
             }
             catch (UnauthorizedAccessException)
             {

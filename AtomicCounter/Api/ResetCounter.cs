@@ -22,11 +22,9 @@ namespace AtomicCounter.Api
 
             return await AuthProvider.AuthorizeUserAndExecute(
                 req,
-                async profile =>
+                counter,
+                async (profile, meta) =>
                 {
-                    // Check reset rights (with throw gracefully if not authorized)
-                    await AppStorage.GetCounterMetadataAsync(profile, counter);
-
                     // Send reset event
                     await AppStorage.SendDeleteEventAsync(counter);
                     return new AcceptedResult();

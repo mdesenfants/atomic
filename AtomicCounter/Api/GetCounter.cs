@@ -1,5 +1,5 @@
+using AtomicCounter.Models;
 using AtomicCounter.Models.ViewModels;
-using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -21,24 +21,20 @@ namespace AtomicCounter.Api
         {
             log.LogInformation("Getting info for counter {0}", counter);
 
-            return await AuthProvider.AuthorizeUserAndExecute(
-                req,
-                async user =>
-                {
-                    var existing = await AppStorage.GetCounterMetadataAsync(user, counter);
+            return await AuthProvider.AuthorizeUserAndExecute(req, counter, GetViewModel);
+        }
 
-                    if (existing == null) return new NotFoundResult();
-
-                    return new OkObjectResult(new CounterViewModel()
-                    {
-                        CounterName = existing.CounterName,
-                        Origins = existing.Origins,
-                        ReadKeys = existing.ReadKeys
-                            .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
-                        WriteKeys = existing.WriteKeys
-                            .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
-                    });
-                });
+        private static async Task<IActionResult> GetViewModel(UserProfile profile, Counter existing)
+        {
+            return await Task.FromResult(new OkObjectResult(new CounterViewModel()
+            {
+                CounterName = existing.CounterName,
+                Origins = existing.Origins,
+                ReadKeys = existing.ReadKeys
+                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
+                WriteKeys = existing.WriteKeys
+                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
+            }));
         }
     }
 }

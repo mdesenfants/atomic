@@ -22,12 +22,9 @@ namespace AtomicCounter.Api
         {
             log.LogInformation($"Start rotating {readorwrite} keys for {counter}.");
 
-            return await Authorization.AuthorizeUserAndExecute(req, async (user) =>
+            return await Authorization.AuthorizeUserAndExecute(req, counter, async (user, meta) =>
             {
-                var result = await AppStorage.RotateKeysAsync(user, counter, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
-
-                if (result == null) return new NotFoundResult();
-
+                var result = await AppStorage.RotateKeysAsync(meta, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
                 return new OkObjectResult(result);
             });
         }
