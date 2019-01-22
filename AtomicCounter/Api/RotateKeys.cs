@@ -13,7 +13,7 @@ namespace AtomicCounter.Api
     {
         public static IAuthorizationProvider Authorization = new AuthorizationProvider();
 
-        [FunctionName("RotateKeys")]
+        [FunctionName(nameof(RotateKeys))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{counter}/keys/{readorwrite}/rotate")]HttpRequest req,
             string counter,

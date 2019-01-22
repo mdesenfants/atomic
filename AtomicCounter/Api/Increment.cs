@@ -13,7 +13,7 @@ namespace AtomicCounter.Api
     {
         public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
 
-        [FunctionName("Increment")]
+        [FunctionName(nameof(Increment))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "counter/{counter}/increment")]HttpRequest req,
             string counter,

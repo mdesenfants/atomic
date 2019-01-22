@@ -8,7 +8,7 @@ namespace AtomicCounter.EventHandlers
 {
     public static class IncrementEventHandler
     {
-        [FunctionName("IncrementEventHandler")]
+        [FunctionName(nameof(IncrementEventHandler))]
         public static async Task Run(
             [QueueTrigger(AppStorage.CountQueueName, Connection = "AzureWebJobsStorage")]IncrementEvent increment,
             ILogger log)

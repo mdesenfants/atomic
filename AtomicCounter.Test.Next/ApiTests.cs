@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using AtomicCounter.Api;
+﻿using AtomicCounter.Api;
 using AtomicCounter.EventHandlers;
 using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
@@ -12,6 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 
@@ -122,6 +122,10 @@ namespace AtomicCounter.Test
             req.Method = "DELETE";
             var resetResult = (AcceptedResult)await ResetCounter.Run(req, Initialize.Counter, logger);
             Assert.IsNotNull(resetResult);
+
+            await ResetEventHandler.Run(Initialize.Counter, logger);
+
+            await RecreateEventHandler.Run(Initialize.Counter, logger);
         }
 
         private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected)

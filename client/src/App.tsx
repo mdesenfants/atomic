@@ -30,42 +30,16 @@ class App extends React.Component<{}, IAppState> {
             getAuthToken(value, 'google').then(t => this.setState({ client: new AtomicCounterClient(t) }));
         };
 
-        const inc = this.increment.bind(this);
-        const reset = this.reset.bind(this);
-
         return (
             <div className="App">
                 <header className="App-header">
                     <img src={logo} className="App-logo" alt="logo" />
                     <h1 className="App-title">Atomic Counter</h1>
                 </header>
-                {this.state.client ? <Counter client={this.state.client} /> : null}
-                <p className="App-intro">
-                    {this.state.count}
-                </p>
                 {this.state.client ? null : <GoogleLogin tokenCallback={callback} />}
-                {this.state.client ? <button onClick={inc}>Increment</button> : null}
-                {this.state.client ? <button onClick={reset}>Reset</button> : null}
+                {this.state.client ? <Counter client={this.state.client} /> : null}
             </div>
         );
-    }
-
-    private async increment(): Promise<void> {
-        if (this.state.client) {
-            try {
-                await this.state.client.createCounter("bill");
-            } catch {
-                //
-            }
-
-            await this.state.client.increment("bill");
-        }
-    }
-
-    private async reset(): Promise<void> {
-        if (this.state.client) {
-            await this.state.client.reset("bill");
-        }
     }
 }
 

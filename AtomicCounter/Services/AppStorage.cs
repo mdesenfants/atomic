@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using System;
@@ -17,25 +18,39 @@ namespace AtomicCounter.Services
     public class AppStorage
     {
         public const string CountQueueName = "increment-items";
+        public const string ResetEventsQueueName = "reset-events";
+        public const string RecreateEventsQueueName = "recreate-events";
         public const string ProfilesKey = "profiles";
         public const string CountersKey = "counters";
 
-        public static async Task ResetAsync(UserProfile profile, string counter, ILogger logger)
+        public static async Task DeleteCounterAsync(string counter, ILogger logger)
         {
-            try
-            {
-                var info = GetCounterMetadataAsync(profile, counter);
+            var counterClient = new CountStorage(counter, logger);
+            var table = counterClient.GetCounterTable();
+            await table.DeleteIfExistsAsync();
+        }
 
-                var counterClient = new CountStorage(counter, logger);
-                var table = counterClient.GetCounterTable();
-                await table.DeleteAsync();
-                await table.CreateAsync();
-            }
-            catch
-            {
-                logger.LogWarning($"Cannot reset counter {counter}.");
-                throw;
-            }
+        public static async Task RecreateCounterAsync(string counter, ILogger logger)
+        {
+            var counterClient = new CountStorage(counter, logger);
+            var table = counterClient.GetCounterTable();
+            await table.CreateIfNotExistsAsync();
+        }
+
+        public static async Task SendDeleteEventAsync(string counter)
+        {
+            var queueClient = Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference(ResetEventsQueueName);
+            var message = new CloudQueueMessage(counter);
+            await queue.AddMessageAsync(message);
+        }
+
+        public static async Task SendRecreateEventAsync(string counter)
+        {
+            var queueClient = Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference(RecreateEventsQueueName);
+            var message = new CloudQueueMessage(counter);
+            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
         }
 
         public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token)
@@ -282,30 +297,31 @@ namespace AtomicCounter.Services
             return blobClient.GetContainerReference(CountersKey);
         }
 
-        private static async Task UpdateCounterMetadataAsync(Counter counter)
-        {
-            var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(counter.CounterName);
-            await block.UploadTextAsync(JsonConvert.SerializeObject(counter));
-        }
-
         static AppStorage()
         {
             Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
+            var tasks = new List<Task>();
+
             var queueClient = Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(CountQueueName);
-            var countQueueTask = queue.CreateIfNotExistsAsync();
+            tasks.Add(queue.CreateIfNotExistsAsync());
+
+            var resetQueue = queueClient.GetQueueReference(ResetEventsQueueName);
+            tasks.Add(resetQueue.CreateIfNotExistsAsync());
+
+            var createQueue = queueClient.GetQueueReference(RecreateEventsQueueName);
+            tasks.Add(createQueue.CreateIfNotExistsAsync());
 
             var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
-            var profilesTask = table.CreateIfNotExistsAsync();
+            tasks.Add(table.CreateIfNotExistsAsync());
 
             var blobClient = Storage.CreateCloudBlobClient();
             var blob = blobClient.GetContainerReference(CountersKey);
-            var countersTask = blob.CreateIfNotExistsAsync();
+            tasks.Add(blob.CreateIfNotExistsAsync());
 
-            Task.WaitAll(new[] { countQueueTask, profilesTask, countersTask });
+            Task.WaitAll(tasks.ToArray());
         }
 
         public static readonly CloudStorageAccount Storage;

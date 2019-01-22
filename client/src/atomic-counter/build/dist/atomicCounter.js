@@ -80,13 +80,13 @@ export class AtomicCounterClient {
     }
     reset(counter) {
         return tslib_1.__awaiter(this, void 0, void 0, function* () {
-            yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}`, {
+            yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/reset`, {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
                     "X-ZUMO-AUTH": this.token
                 },
-                method: "DELETE",
+                method: "POST",
             });
         });
     }

@@ -83,13 +83,13 @@ export class AtomicCounterClient {
     }
 
     public async reset(counter: string): Promise<void> {
-        await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}`, {
+        await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/reset`, {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 "X-ZUMO-AUTH": this.token
             },
-            method: "DELETE",
+            method: "POST",
         });
     }
 }
