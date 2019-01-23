@@ -65,7 +65,8 @@ namespace AtomicCounter.Services
         public async Task IncrementAsync(Guid id, long count = 1)
         {
             var table = GetCounterTable();
-            var insert = TableOperation.Insert(new CountEntity()
+
+            var insert = TableOperation.InsertOrReplace(new CountEntity()
             {
                 PartitionKey = CountPartition,
                 RowKey = id.ToString(),
