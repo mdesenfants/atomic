@@ -19,10 +19,6 @@ namespace AtomicCounter.Test
             Environment.SetEnvironmentVariable("AzureWebJobsStorage", "UseDevelopmentStorage=true;");
             var storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
-            var queueClient = storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference($"lock-{CountStorage.Sanitize(testa)}");
-            await queue.DeleteIfExistsAsync();
-
             var tableClient = storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(CountStorage.Tableize(testa));
             await table.DeleteIfExistsAsync();

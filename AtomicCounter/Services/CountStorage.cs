@@ -45,51 +45,6 @@ namespace AtomicCounter.Services
             return $"count{Sanitize(input)}";
         }
 
-        public async Task CreateCounterLockQueue()
-        {
-            var queueName = GetLockQueueName();
-            try
-            {
-                var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
-                var queueClient = storageAccount.CreateCloudQueueClient();
-
-                // Retrieve a reference to a container.
-                var queue = queueClient.GetQueueReference(queueName);
-
-                await queue.CreateIfNotExistsAsync();
-            }
-            catch
-            {
-                logger.LogError($"Could not get counter queue {queueName}.");
-                throw;
-            }
-        }
-
-        private string GetLockQueueName()
-        {
-            return $"lock-{Sanitize(Counter)}";
-        }
-
-        internal CloudQueue GetCounterLockQueue()
-        {
-            var lockQueueName = GetLockQueueName();
-            try
-            {
-                var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
-                var queueClient = storageAccount.CreateCloudQueueClient();
-
-                // Retrieve a reference to a container.
-                var queue = queueClient.GetQueueReference(lockQueueName);
-
-                return queue;
-            }
-            catch
-            {
-                logger.LogError($"Could not get counter queue {lockQueueName}.");
-                throw;
-            }
-        }
-
         internal CloudTable GetCounterTable()
         {
             var tableName = Tableize(Counter);
@@ -107,67 +62,17 @@ namespace AtomicCounter.Services
             }
         }
 
-        public async Task IncrementAsync(long count = 1)
+        public async Task IncrementAsync(Guid id, long count = 1)
         {
-            var locks = GetCounterLockQueue();
-            var @lock = await locks.GetMessageAsync();
-            var row = @lock?.AsString ?? Guid.NewGuid().ToString();
-
-            try
+            var table = GetCounterTable();
+            var insert = TableOperation.Insert(new CountEntity()
             {
-                var table = GetCounterTable();
+                PartitionKey = CountPartition,
+                RowKey = id.ToString(),
+                Count = count
+            });
 
-                var read = TableOperation.Retrieve<CountEntity>(CountPartition, row);
-                var result = await table.ExecuteAsync(read);
-
-                if (result.Result != null)
-                {
-                    var current = (CountEntity)result.Result;
-
-                    current.Count++;
-
-                    var update = TableOperation.Replace(current);
-
-                    await table.ExecuteAsync(update);
-                }
-                else
-                {
-                    var insert = TableOperation.Insert(new CountEntity()
-                    {
-                        PartitionKey = CountPartition,
-                        RowKey = row,
-                        Count = count
-                    });
-
-                    await table.ExecuteAsync(insert);
-                }
-            }
-            finally
-            {
-                if (@lock != null)
-                {
-                    try
-                    {
-                        await locks.DeleteMessageAsync(@lock);
-                    }
-                    catch
-                    {
-                        logger.LogWarning("Couldn't delete lock message. Skipping.");
-                    }
-                }
-
-                if (row != null)
-                {
-                    try
-                    {
-                        await locks.AddMessageAsync(new CloudQueueMessage(row));
-                    }
-                    catch
-                    {
-                        logger.LogWarning("Could not add new lock. Skipping.");
-                    }
-                }
-            }
+            await table.ExecuteAsync(insert);
         }
 
         public async Task<long> CountAsync()

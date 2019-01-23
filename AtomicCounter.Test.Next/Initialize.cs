@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using AtomicCounter.Services;
+﻿using AtomicCounter.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.WindowsAzure.Storage;
+using System;
+using System.Threading.Tasks;
 
 namespace AtomicCounter.Test
 {
@@ -20,10 +20,8 @@ namespace AtomicCounter.Test
             Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 
             var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference($"lock-{CountStorage.Sanitize(Counter)}");
-            await queue.DeleteIfExistsAsync();
             var increments = queueClient.GetQueueReference("increment-items");
-            await queue.DeleteIfExistsAsync();
+            await increments.DeleteIfExistsAsync();
 
             var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(CountStorage.Tableize(Counter));

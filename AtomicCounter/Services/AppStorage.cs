@@ -219,13 +219,11 @@ namespace AtomicCounter.Services
 
                 var client = new CountStorage(counter, log);
                 var table = client.GetCounterTable();
-                var locks = client.GetCounterLockQueue();
                 try
                 {
                     var tasks = new[] {
                         block.UploadTextAsync(JsonConvert.SerializeObject(newCounter)),
                         table.CreateIfNotExistsAsync(),
-                        locks.CreateIfNotExistsAsync()
                     };
 
                     await Task.Run(() => Task.WaitAll(tasks));
@@ -236,7 +234,6 @@ namespace AtomicCounter.Services
                     var tasks = new[] {
                         block.DeleteIfExistsAsync(),
                         table.DeleteIfExistsAsync(),
-                        locks.DeleteIfExistsAsync()
                     };
 
                     await Task.Run(() => Task.WaitAll(tasks));
