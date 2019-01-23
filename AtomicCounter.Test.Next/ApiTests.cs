@@ -41,6 +41,8 @@ namespace AtomicCounter.Test
 
             var logger = new TestLogger();
 
+            AppStorage.CreateAppStorage();
+
             // Add a counter
             var counterViewModel = await AddCounter(mockAuth, req, logger);
 
