@@ -58,7 +58,7 @@ namespace AtomicCounter.Test
             await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 3);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "First count.");
 
             // Rotate read keys
             await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1);
@@ -79,13 +79,13 @@ namespace AtomicCounter.Test
             await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 5);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Count after rotation.");
 
             // Should reset count to zero
             await RunResetCounter(mockAuth, req, logger);
 
             // Makes sure counter was reset
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 0);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.");
         }
 
         private static async Task<CounterViewModel> AddCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
@@ -132,7 +132,7 @@ namespace AtomicCounter.Test
             await RecreateEventHandler.Run(Initialize.Counter, logger);
         }
 
-        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected)
+        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected, string message)
         {
             Count.AuthProvider = mockAuth.Object;
             req.Method = "GET";
@@ -142,7 +142,7 @@ namespace AtomicCounter.Test
                 req.QueryString = new QueryString("?key=" + key);
                 var countResult = (OkObjectResult)await Count.Run(req, Initialize.Counter, logger);
                 var finalCount = (long)countResult.Value;
-                Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}.", iteration, key);
+                Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}. {2}", iteration, key, message);
                 iteration++;
             }
         }
@@ -215,7 +215,8 @@ namespace AtomicCounter.Test
                         It.IsAny<HttpRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<UserCounterDelegate>()))
-                .Returns<HttpRequest, string, UserCounterDelegate>((a, b, c) => {
+                .Returns<HttpRequest, string, UserCounterDelegate>((a, b, c) =>
+                {
                     var meta = AppStorage.GetCounterMetadataAsync(b).Result;
                     return c(profile, meta);
                 });
