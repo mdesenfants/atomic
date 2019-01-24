@@ -28,8 +28,16 @@ namespace AtomicCounter.Api
                 counter,
                 async () =>
                 {
-                    await new CountStorage(counter, log)
-                        .SendIncrementEventAsync(count);
+                    var cs = new CountStorage(counter, log);
+                    var client = req.Query["client"].FirstOrDefault() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(client))
+                    {
+                        await cs.SendIncrementEventAsync(count, client);
+                    }
+                    else
+                    {
+                        await cs.SendIncrementEventAsync(count);
+                    }
 
                     return new AcceptedResult();
                 });

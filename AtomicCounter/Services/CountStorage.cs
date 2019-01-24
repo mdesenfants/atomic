@@ -21,7 +21,7 @@ namespace AtomicCounter.Services
             this.logger = logger;
         }
 
-        public async Task SendIncrementEventAsync(long count = 1)
+        public async Task SendIncrementEventAsync(long count = 1, string client = null)
         {
             var queueClient = AppStorage.Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(AppStorage.CountQueueName);
@@ -30,6 +30,7 @@ namespace AtomicCounter.Services
             {
                 Counter = Counter,
                 Count = count,
+                Client = client
             }.ToString());
 
             await queue.AddMessageAsync(message);
@@ -62,7 +63,7 @@ namespace AtomicCounter.Services
             }
         }
 
-        public async Task IncrementAsync(Guid id, long count = 1)
+        public async Task IncrementAsync(Guid id, long count = 1, string client = null)
         {
             var table = GetCounterTable();
 
@@ -70,13 +71,14 @@ namespace AtomicCounter.Services
             {
                 PartitionKey = CountPartition,
                 RowKey = id.ToString(),
-                Count = count
+                Count = count,
+                Client = client
             });
 
             await table.ExecuteAsync(insert);
         }
 
-        public async Task<long> CountAsync()
+        public async Task<long> CountAsync(Func<CountEntity, bool> conditions = null)
         {
             try
             {
@@ -98,7 +100,14 @@ namespace AtomicCounter.Services
                     var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
                     token = resultSegment.ContinuationToken;
 
-                    sum += resultSegment.Results.Sum(x => x.Count);
+                    if (conditions != null)
+                    {
+                        sum += resultSegment.Results.Where(conditions).Sum(x => x.Count);
+                    }
+                    else
+                    {
+                        sum += resultSegment.Results.Sum(x => x.Count);
+                    }
                 } while (token != null);
 
                 return sum;
@@ -109,10 +118,29 @@ namespace AtomicCounter.Services
                 return 0;
             }
         }
+
+        public async Task<long> CountAsync(string client)
+        {
+            return await CountAsync(x => client.Equals(x.Client, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public async Task<long> CountAsync(DateTimeOffset min, DateTimeOffset max)
+        {
+            return await CountAsync(x => x.Timestamp >= min && x.Timestamp <= max);
+        }
+
+        public async Task<long> CountAsync(string client, DateTimeOffset min, DateTimeOffset max)
+        {
+            return await CountAsync(x =>
+                client.Equals(x.Client, StringComparison.OrdinalIgnoreCase) &&
+                x.Timestamp >= min &&
+                x.Timestamp <= max);
+        }
     }
 
     public class CountEntity : TableEntity
     {
         public long Count { get; set; }
+        public string Client { get; set; }
     }
 }

@@ -22,11 +22,12 @@ namespace AtomicCounter.EventHandlers
             }
             catch
             {
-                var table = counter.GetCounterTable();
-                if (!await table.ExistsAsync())
+                if (!await counter.GetCounterTable().ExistsAsync())
                 {
                     await AppStorage.SendRecreateEventAsync(increment.Counter);
                 }
+
+                throw;
             }
         }
     }
