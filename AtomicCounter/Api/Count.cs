@@ -5,6 +5,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -41,12 +42,32 @@ namespace AtomicCounter.Api
                 var minParam = req.Query["min"].FirstOrDefault();
                 var maxParam = req.Query["max"].FirstOrDefault();
 
-                if (DateTimeOffset.TryParse(minParam, out var min) || DateTimeOffset.TryParse(maxParam, out var max))
+                var min = DateTimeOffset.MinValue;
+                try
                 {
-                    min = min > DateTimeOffset.MinValue ? min : DateTimeOffset.MinValue;
-                    max = max < DateTimeOffset.MaxValue ? max : DateTimeOffset.MaxValue;
+                    if (minParam != null)
+                    {
+                        min = DateTimeOffset.ParseExact(minParam, "o", CultureInfo.InvariantCulture);
+                        mode |= (int)Mode.Date;
+                    }
+                }
+                catch
+                {
+                    return new BadRequestObjectResult("Min query parameter timestamp must conform to ISO 8601.");
+                }
 
-                    mode |= (int)Mode.Date;
+                var max = DateTimeOffset.MaxValue;
+                try
+                {
+                    if (maxParam != null)
+                    {
+                        max = DateTimeOffset.ParseExact(maxParam, "o", CultureInfo.InvariantCulture);
+                        mode |= (int)Mode.Date;
+                    }
+                }
+                catch
+                {
+                    return new BadRequestObjectResult("Max query parameter timestamp must conform to ISO 8601.");
                 }
 
                 var storage = new CountStorage(counter, log);

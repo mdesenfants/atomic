@@ -11,6 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
@@ -22,6 +23,8 @@ namespace AtomicCounter.Test
     [TestClass]
     public class ApiTests
     {
+        private const string ClientName = "client";
+
         [TestMethod]
         public async Task HappyPathTests()
         {
@@ -60,6 +63,18 @@ namespace AtomicCounter.Test
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
             await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "First count.");
 
+            // Increment counter for client and time rnage
+            var min = new DateTime(DateTime.UtcNow.Ticks, DateTimeKind.Utc);
+            await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
+            await HandleCountEvent(logger);
+            var max = DateTimeOffset.UtcNow;
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Client count.", client: ClientName);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Date count.", min: min, max: max);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Client and date count", min: min, max: max, client: ClientName);
+
+            // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "First count.");
+
             // Rotate read keys
             await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1);
 
@@ -79,7 +94,7 @@ namespace AtomicCounter.Test
             await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Count after rotation.");
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 9, "Count after rotation.");
 
             // Should reset count to zero
             await RunResetCounter(mockAuth, req, logger);
@@ -132,14 +147,19 @@ namespace AtomicCounter.Test
             await RecreateEventHandler.Run(Initialize.Counter, logger);
         }
 
-        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected, string message)
+        private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected, string message, string client = null, DateTimeOffset? min = null, DateTimeOffset? max = null)
         {
             Count.AuthProvider = mockAuth.Object;
             req.Method = "GET";
             var iteration = 1;
             foreach (var key in getCounterViewModel.ReadKeys)
             {
-                req.QueryString = new QueryString("?key=" + key);
+                var query = "?key=" + key;
+                query += string.IsNullOrEmpty(client) ? string.Empty : $"&client={client}";
+                query += min == null ? string.Empty : $"&min={Uri.EscapeDataString(min?.ToString("o", CultureInfo.InvariantCulture))}";
+                query += max == null ? string.Empty : $"&max={Uri.EscapeDataString(max?.ToString("o", CultureInfo.InvariantCulture))}";
+
+                req.QueryString = new QueryString(query);
                 var countResult = (OkObjectResult)await Count.Run(req, Initialize.Counter, logger);
                 var finalCount = (long)countResult.Value;
                 Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}. {2}", iteration, key, message);
@@ -160,14 +180,16 @@ namespace AtomicCounter.Test
             }
         }
 
-        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel)
+        private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, string client = null)
         {
             Api.Increment.AuthProvider = mockAuth.Object;
             req.Method = "POST";
             var defaultHasRun = false;
             foreach (var key in getCounterViewModel.WriteKeys)
             {
-                var modifier = defaultHasRun ? "" : "&count=2";
+                var modifier = defaultHasRun ? string.Empty : "&count=2";
+                modifier += string.IsNullOrEmpty(client) ? string.Empty : $"&client={client}";
+
                 req.QueryString = new QueryString($"?key={key}{modifier}");
                 var incrementResult = (AcceptedResult)await Api.Increment.Run(req, Initialize.Counter, logger);
                 Assert.IsNotNull(incrementResult);

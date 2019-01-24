@@ -63,7 +63,7 @@ namespace AtomicCounter.Services
             }
         }
 
-        public async Task IncrementAsync(Guid id, long count = 1, string client = null)
+        public async Task IncrementAsync(Guid id, string client, long count = 1)
         {
             var table = GetCounterTable();
 
@@ -126,15 +126,19 @@ namespace AtomicCounter.Services
 
         public async Task<long> CountAsync(DateTimeOffset min, DateTimeOffset max)
         {
-            return await CountAsync(x => x.Timestamp >= min && x.Timestamp <= max);
+            return await CountAsync(x => DateInRange(x.Timestamp, min, max));
+        }
+
+        private static bool DateInRange(DateTimeOffset timestamp, DateTimeOffset min, DateTimeOffset max)
+        {
+            return timestamp >= min && timestamp < max;
         }
 
         public async Task<long> CountAsync(string client, DateTimeOffset min, DateTimeOffset max)
         {
             return await CountAsync(x =>
                 client.Equals(x.Client, StringComparison.OrdinalIgnoreCase) &&
-                x.Timestamp >= min &&
-                x.Timestamp <= max);
+                DateInRange(x.Timestamp, min, max));
         }
     }
 

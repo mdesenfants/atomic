@@ -17,7 +17,7 @@ namespace AtomicCounter.EventHandlers
             var counter = new CountStorage(increment.Counter, log);
             try
             {
-                await counter.IncrementAsync(increment.EventId, increment.Count);
+                await counter.IncrementAsync(increment.EventId, increment.Client, increment.Count);
                 log.LogInformation($"Complete: {increment}");
             }
             catch
