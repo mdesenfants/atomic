@@ -9,7 +9,7 @@ namespace AtomicCounter.Test
     [TestClass]
     public class Initialize
     {
-        public const string Counter = "test_counter";
+        public const string Counter = "testcounter";
 
         public static CloudStorageAccount Storage;
 

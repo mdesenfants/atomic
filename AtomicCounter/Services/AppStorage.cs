@@ -105,7 +105,7 @@ namespace AtomicCounter.Services
 
         public static bool CounterNameIsValid(string name)
         {
-            return name.Length <= 58 && name.Length > 0 && name.Any(c => !char.IsLetterOrDigit(c));
+            return name.Length <= 58 && name.Length > 0 && name.All(c => char.IsLetterOrDigit(c));
         }
 
         internal static async Task<string[]> RotateKeysAsync(Counter counter, KeyMode mode)
@@ -191,6 +191,7 @@ namespace AtomicCounter.Services
         {
             if (!CounterNameIsValid(counter))
             {
+                log.LogInformation($"Counter named '{counter}' was denied because it was invalid.");
                 throw new InvalidOperationException();
             }
 
