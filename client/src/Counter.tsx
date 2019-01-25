@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { AtomicCounterClient } from './atomic-counter/build/dist/atomicCounter';
-import './GoogleLogin.css';
+import './Counter.css';
 
 interface ICounterProps {
     client: AtomicCounterClient;
@@ -56,7 +56,7 @@ export class Counter extends React.Component<ICounterProps, ICounterState> {
             };
         };
 
-        const counterToLi = (input: string) => (<li key={input} onClick={selectCounter(input)}>{input}</li>);
+        const counterToLi = (input: string) => (<li key={input} className="Counter-counter" onClick={selectCounter(input)}>{input}</li>);
 
         return (
             <div>

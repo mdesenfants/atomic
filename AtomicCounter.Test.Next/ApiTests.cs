@@ -52,8 +52,6 @@ namespace AtomicCounter.Test
             // Get existing counter
             var getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
 
-            // Add counter to counter
-
             // Increment counter
             await Increment(mockAuth, req, logger, getCounterViewModel);
 

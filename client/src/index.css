@@ -26,6 +26,7 @@ h2 {
 
 input, button {
   font-size: .8em;
+  border-radius: 5px;
 }
 
 button {
@@ -48,15 +49,15 @@ input {
 }
 
 input {
-  box-shadow: inset 0px 1px 4px rgba(0, 0, 0, .5);
+  box-shadow: inset 0px 1px 4px rgba(0, 0, 0, .5), 0px 1px 4px rgba(0, 0, 0, .5);
 }
 
 input:focus, input:valid {
-  box-shadow: inset 0px 1px 4px rgba(0, 0, 255, .5);
+  box-shadow: inset 0px 1px 4px rgba(0, 0, 255, .5), 0px 1px 4px rgba(0, 0, 0, .5);
 }
 
 input:invalid {
-  box-shadow: inset 0px 1px 4px rgba(255, 0, 0, .5);
+  box-shadow: inset 0px 1px 4px rgba(255, 0, 0, .5), 0px 1px 4px rgba(0, 0, 0, .5);
 }
 
 ul {
