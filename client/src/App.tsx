@@ -7,8 +7,6 @@ import { Counter } from './Counter';
 
 import GoogleLogin from './GoogleLogin';
 
-import logo from './logo.svg';
-
 hello.init({
     google: '1076081007580-rabmg87rit0dcdcc6m29pecc35i0lj5p.apps.googleusercontent.com'
 });
@@ -27,15 +25,12 @@ class App extends React.Component<{}, IAppState> {
 
     public render() {
         const callback = (value: any) => {
-            getAuthToken(value, 'google').then(t => this.setState({ client: new AtomicCounterClient(t) }));
+            this.setState({ client: new AtomicCounterClient(() => getAuthToken(value, 'google'))});
         };
 
         return (
             <div className="App">
-                <header className="App-header">
-                    <img src={logo} className="App-logo" alt="logo" />
-                    <h1 className="App-title">Atomic Counter</h1>
-                </header>
+                <h1>Atomic Counter</h1>
                 {this.state.client ? null : <GoogleLogin tokenCallback={callback} />}
                 {this.state.client ? <Counter client={this.state.client} /> : null}
             </div>

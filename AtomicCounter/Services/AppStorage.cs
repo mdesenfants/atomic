@@ -84,7 +84,10 @@ namespace AtomicCounter.Services
                 while (canContinue())
                 {
                     var messages = await poison.GetMessagesAsync(countSettingValue);
-                    if (messages.Count() == 0) break;
+                    if (messages.Count() == 0)
+                    {
+                        break;
+                    }
 
                     foreach (var message in messages)
                     {
@@ -105,7 +108,9 @@ namespace AtomicCounter.Services
 
         public static bool CounterNameIsValid(string name)
         {
-            return name.Length <= 58 && name.Length > 0 && name.All(c => char.IsLetterOrDigit(c));
+            return name.Length <= 58 &&
+                name.Length > 3 &&
+                name.All(c => char.IsDigit(c) || char.IsLower(c));
         }
 
         internal static async Task<string[]> RotateKeysAsync(Counter counter, KeyMode mode)
@@ -228,6 +233,9 @@ namespace AtomicCounter.Services
                     };
 
                     await Task.Run(() => Task.WaitAll(tasks));
+
+                    profile.Counters.Add(newCounter.CounterName);
+                    await SaveUserProfileAsync(profile);
                 }
                 catch
                 {

@@ -42,9 +42,9 @@ export async function getAuthToken(token: string, provider: string): Promise<str
 }
 
 export class AtomicCounterClient {
-    private token: string;
+    private token: () => Promise<string>;
 
-    constructor(authToken: string) {
+    constructor(authToken: () => Promise<string>) {
         this.token = authToken;
     }
 
@@ -53,7 +53,7 @@ export class AtomicCounterClient {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": this.token
+                "X-ZUMO-AUTH": await this.token()
             },
             method: "POST"
         }).then(t => t.json() as unknown as ICounter);
@@ -64,10 +64,21 @@ export class AtomicCounterClient {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": this.token
+                "X-ZUMO-AUTH": await this.token()
             },
             method: "GET",
         }).then(t => t.json() as unknown as ICounter);
+    }
+
+    public async getCounters() {
+        return await fetch('https://atomiccounter.azurewebsites.net/api/counters', {
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-ZUMO-AUTH": await this.token()
+            },
+            method: "GET",
+        }).then(t => t.json() as unknown as string[]);
     }
 
     public async increment(counter: string): Promise<void> {
@@ -87,7 +98,7 @@ export class AtomicCounterClient {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": this.token
+                "X-ZUMO-AUTH": await this.token()
             },
             method: "POST",
         });

@@ -46,7 +46,7 @@ export class AtomicCounterClient {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": this.token
+                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "POST"
             }).then(t => t.json());
@@ -58,7 +58,19 @@ export class AtomicCounterClient {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": this.token
+                    "X-ZUMO-AUTH": yield this.token()
+                },
+                method: "GET",
+            }).then(t => t.json());
+        });
+    }
+    getCounters() {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return yield fetch('https://atomiccounter.azurewebsites.net/api/counters', {
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "GET",
             }).then(t => t.json());
@@ -84,7 +96,7 @@ export class AtomicCounterClient {
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": this.token
+                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "POST",
             });
