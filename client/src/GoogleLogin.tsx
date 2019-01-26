@@ -2,6 +2,8 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './GoogleLogin.css';
 
+import Button from 'react-bootstrap/Button';
+
 interface IGoogleProps {
     tokenCallback: (token: any) => void;
 }
@@ -26,11 +28,23 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
         this.state = { tokenCallback: props.tokenCallback };
     }
 
+    public componentDidMount() {
+        const goog = sessionStorage.getItem('googleToken');
+        if (goog) {
+            GoogleLogin.getGoogleToken().then(x => {
+                if (x) {
+                    sessionStorage.setItem('googleToken', x);
+                    this.state.tokenCallback(x);
+                }
+            });
+        }
+    }
+
     public render() {
         const callback = this.signIn.bind(this);
 
         return (
-            <button onClick={callback}>Sign In</button>
+            <Button onClick={callback}>Sign In</Button>
         );
     }
 
@@ -41,6 +55,7 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
             return;
         }
 
+        sessionStorage.setItem('googleToken', goog);
         this.state.tokenCallback(goog);
     }
 }
