@@ -33,17 +33,10 @@ export class Counter extends React.Component<ICounterProps, ICounterState> {
 
         const counter = () => this.createCounter();
         const inc = () => this.increment();
-        const count = () => this.count()
+        const count = () => this.count();
         const reset = () => this.reset();
 
-        const lpad = (input: number) => {
-            let initial = input.toString();
-            while (initial.length < 7) {
-                initial = '0' + initial;
-            }
-
-            return initial;
-        };
+        const lpad = (input: number) => '0'.repeat(7 - input.toString().length) + input;
 
         const selectCounter = (input: string) => {
             return () => {
@@ -60,7 +53,7 @@ export class Counter extends React.Component<ICounterProps, ICounterState> {
 
         return (
             <div>
-                <input type="text" value={this.state.counterName} onChange={handle} required={true} pattern="[0-9a-z]+" placeholder="Counter" maxLength={58} minLength={3} />
+                <input type="text" value={this.state.counterName} onChange={handle} required={true} pattern="[0-9a-z]{4,58}" placeholder="Counter" maxLength={58} minLength={4} />
                 <br />
                 <button onClick={counter}>Create Counter</button>
                 <p>

@@ -7,11 +7,12 @@ export interface ICounter {
 export declare function increment(counter: string, key: string): Promise<void>;
 export declare function count(counter: string, key: string): Promise<number>;
 export declare function getAuthToken(token: string, provider: string): Promise<string>;
+export declare function counterNameIsValid(input: string): boolean;
 export declare class AtomicCounterClient {
     private token;
     constructor(authToken: () => Promise<string>);
-    createCounter(counter: string): Promise<ICounter>;
-    getCounter(counter: string): Promise<ICounter>;
+    createCounter(counter: string): Promise<ICounter | null>;
+    getCounter(counter: string): Promise<ICounter | null>;
     getCounters(): Promise<string[]>;
     increment(counter: string): Promise<void>;
     count(counter: string): Promise<number>;
