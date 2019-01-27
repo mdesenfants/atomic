@@ -66,7 +66,7 @@ export async function getAuthToken(token: string, provider: string): Promise<str
 }
 
 export function counterNameIsValid(input: string): boolean {
-    return /[a-z0-9]{4,53}/.test(input)
+    return input.length > 3 && input.length < 54 && /[a-z0-9]+/.test(input)
 }
 
 export class AtomicCounterClient {

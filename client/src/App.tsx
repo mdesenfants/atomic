@@ -2,11 +2,10 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './App.css';
 
-import Button from 'react-bootstrap/Button';
-import DropdownButton from 'react-bootstrap/DropdownButton';
+import { Button, ButtonToolbar, Col, Container, DropdownButton, Row } from 'react-bootstrap';
 import MenuItem from 'react-bootstrap/DropdownItem'
 
-import { AtomicCounterClient, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
+import { AtomicCounterClient, counterNameIsValid, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
 
 import GoogleLogin from './GoogleLogin';
 
@@ -20,6 +19,7 @@ interface IAppState {
     timeoutHandle: NodeJS.Timeout | null;
     counterName: string;
     otherCounters: string[];
+    disabled: boolean;
 }
 
 class App extends React.Component<{}, IAppState> {
@@ -29,6 +29,7 @@ class App extends React.Component<{}, IAppState> {
             client: null,
             count: 0,
             counterName: "",
+            disabled: true,
             otherCounters: [],
             timeoutHandle: null,
         };
@@ -44,11 +45,16 @@ class App extends React.Component<{}, IAppState> {
 
         const selectCounter = (input: string) => {
             return () => {
+                this.setState({
+                    counterName: input || this.state.counterName,
+                    disabled: true,
+                });
+
                 if (this.state.client) {
                     this.state.client.count(input).then(c => {
                         this.setState({
                             count: c,
-                            counterName: input || this.state.counterName,
+                            disabled: false
                         });
                     });
                 }
@@ -63,12 +69,12 @@ class App extends React.Component<{}, IAppState> {
                 {input}
             </MenuItem>;
 
-        return <div className="container">
-            <div className="jumbotron">
-                <h1>Atomic Counter</h1>
-            </div>
-            <div className="row">
-                <div className="col">
+        return <Container>
+            <h1 className="page-header">
+                Atomic Counter <small>for great justice</small>
+            </h1>
+            <Row>
+                <Col>
                     {this.state.client ?
                         <div className="form-group">
                             <div className="input-group">
@@ -83,7 +89,9 @@ class App extends React.Component<{}, IAppState> {
                                     maxLength={58}
                                     minLength={3}
                                 />
-                                <div className="input-group-append" hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1}>
+                                <div
+                                    className="input-group-append"
+                                    hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
                                     <Button className="btn btn-success" onClick={counter}>Create Counter</Button>
                                 </div>
                                 <DropdownButton className="input-group-append" title="Select a counter" id="existing">
@@ -91,35 +99,38 @@ class App extends React.Component<{}, IAppState> {
                                 </DropdownButton>
                             </div>
                         </div> : null}
-                </div>
-            </div>
-            <div className="row">
-                <div className="col">
+                </Col>
+            </Row>
+            <Row>
+                <Col>
                     {this.state.client ? null : <GoogleLogin tokenCallback={callback} />}
-
-                </div>
-            </div>
-            <div className="row">
-                <div className="col">
+                </Col>
+            </Row>
+            <Row>
+                <Col>
                     {this.state.client ? this.renderTools() : null}
-                </div>
-            </div>
-        </div>;
+                </Col>
+            </Row>
+        </Container>;
     }
 
     private renderTools(): React.ReactNode {
+        if (counterNameIsValid(this.state.counterName) && this.state.disabled) {
+            return "Loading...";
+        };
+
         const inc = () => this.increment();
-        const count = () => this.count()
         const reset = () => this.reset();
-        const lpad = (input: number) => '0'.repeat(7 - input.toString().length) + input;
+        const lpad = (input: number) => input.toLocaleString(undefined, { minimumIntegerDigits: 12 });
 
         return <div>
             <p>
                 Count: {lpad(this.state.count)}
             </p>
-            {this.state.client ? <Button onClick={inc}>Increment</Button> : null}
-            {this.state.client ? <Button onClick={count}>Count</Button> : null}
-            {this.state.client ? <Button onClick={reset}>Reset</Button> : null}
+            <ButtonToolbar>
+                {this.state.client ? <Button onClick={inc}>Increment</Button> : null}
+                {this.state.client ? <Button onClick={reset}>Reset</Button> : null}
+            </ButtonToolbar>
         </div>;
     }
 
@@ -137,13 +148,6 @@ class App extends React.Component<{}, IAppState> {
     private async increment(): Promise<void> {
         if (this.state.client) {
             await this.state.client.increment(this.state.counterName);
-        }
-    }
-
-    private async count(): Promise<void> {
-        if (this.state.client) {
-            const result = await this.state.client.count(this.state.counterName);
-            this.setState({ count: result } as any);
         }
     }
 
