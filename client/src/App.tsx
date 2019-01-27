@@ -42,7 +42,7 @@ class App extends React.Component<{}, IAppState> {
                     this.state.client.count(this.state.counterName).then(x => this.setState({ count: x }));
                 }
             }
-        }, 5000);
+        }, 20000);
     }
 
     public render() {
