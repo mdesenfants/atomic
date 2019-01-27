@@ -35,6 +35,16 @@ class App extends React.Component<{}, IAppState> {
         };
     }
 
+    public componentDidMount() {
+        setInterval(() => {
+            if (counterNameIsValid(this.state.counterName) || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
+                if (this.state.client) {
+                    this.state.client.count(this.state.counterName).then(x => this.setState({count: x}));
+                }
+            }
+        }, 5000);
+    }
+
     public render() {
         const callback = (value: any) => {
             const curr = new AtomicCounterClient(() => getAuthToken(value, 'google'));
