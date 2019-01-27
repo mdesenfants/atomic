@@ -109,7 +109,9 @@ export class AtomicCounterClient {
                 "X-ZUMO-AUTH": await this.token()
             },
             method: "GET",
-        }).then(t => t.json() as unknown as ICounter);
+        })
+        .then(t => t.json() as unknown as ICounter)
+        .catch(null);
     }
 
     public async getCounters() {

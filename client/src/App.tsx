@@ -2,7 +2,7 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './App.css';
 
-import { Button, Col, Container, DropdownButton, Row } from 'react-bootstrap';
+import { Button, Col, Container, DropdownButton, FormControl, FormGroup, FormLabel, Row } from 'react-bootstrap';
 import MenuItem from 'react-bootstrap/DropdownItem'
 
 import { AtomicCounterClient, counterNameIsValid, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
@@ -37,7 +37,7 @@ class App extends React.Component<{}, IAppState> {
 
     public componentDidMount() {
         setInterval(() => {
-            if (counterNameIsValid(this.state.counterName) || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
+            if (!this.state.disabled && counterNameIsValid(this.state.counterName) || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
                 if (this.state.client) {
                     this.state.client.count(this.state.counterName).then(x => this.setState({ count: x }));
                 }
@@ -131,8 +131,12 @@ class App extends React.Component<{}, IAppState> {
             return "Select or create a counter to continue.";
         };
 
-        if (this.state.disabled) {
-            return "Loading..."
+        if (this.state.disabled && this.state.otherCounters.indexOf(this.state.counterName) > -1) {
+            return "Loading...";
+        }
+
+        if (counterNameIsValid(this.state.counterName) && this.state.disabled) {
+            return "Create this counter to continue.";
         }
 
         const inc = () => this.increment();
@@ -143,6 +147,14 @@ class App extends React.Component<{}, IAppState> {
             <p>
                 Count: {lpad(this.state.count)}
             </p>
+            <form>
+                <FormGroup>
+                    <FormLabel>Cost per increment</FormLabel>
+                    <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
+                    <FormLabel>Effective date</FormLabel>
+                    <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
+                </FormGroup>
+            </form>
             <DropdownButton title="Other actions" id="actions">
                 <MenuItem onClick={inc}>Increment</MenuItem>
                 <MenuItem onClick={reset}>Reset</MenuItem>
@@ -158,7 +170,23 @@ class App extends React.Component<{}, IAppState> {
     }
 
     private handleCounterNameChange(event: React.ChangeEvent<HTMLInputElement>) {
-        this.setState({ counterName: event.target.value })
+        this.setState({
+            counterName: event.target.value.toString() || this.state.counterName,
+            disabled: true,
+        });
+
+        if (this.state.client) {
+            if (this.state.otherCounters.indexOf(event.target.value) === -1) {
+                return;
+            }
+
+            this.state.client.count(event.target.value).then(c => {
+                this.setState({
+                    count: c,
+                    disabled: false
+                });
+            });
+        }
     }
 
     private async increment(): Promise<void> {
