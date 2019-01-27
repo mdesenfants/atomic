@@ -44,7 +44,7 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
         const callback = this.signIn.bind(this);
 
         return (
-            <Button onClick={callback}>Sign In</Button>
+            <Button onClick={callback}>Sign in with Google</Button>
         );
     }
 

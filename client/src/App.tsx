@@ -2,7 +2,7 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './App.css';
 
-import { Button, ButtonToolbar, Col, Container, DropdownButton, Row } from 'react-bootstrap';
+import { Button, Col, Container, DropdownButton, Row } from 'react-bootstrap';
 import MenuItem from 'react-bootstrap/DropdownItem'
 
 import { AtomicCounterClient, counterNameIsValid, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
@@ -39,7 +39,7 @@ class App extends React.Component<{}, IAppState> {
         setInterval(() => {
             if (counterNameIsValid(this.state.counterName) || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
                 if (this.state.client) {
-                    this.state.client.count(this.state.counterName).then(x => this.setState({count: x}));
+                    this.state.client.count(this.state.counterName).then(x => this.setState({ count: x }));
                 }
             }
         }, 5000);
@@ -80,9 +80,11 @@ class App extends React.Component<{}, IAppState> {
             </MenuItem>;
 
         return <Container>
-            <h1 className="page-header">
-                Atomic Counter <small>for great justice</small>
-            </h1>
+            <div className="header clearfix">
+                <h1 className="page-header">
+                    Atomic Counter
+                </h1>
+            </div>
             <Row>
                 <Col>
                     {this.state.client ?
@@ -125,9 +127,13 @@ class App extends React.Component<{}, IAppState> {
     }
 
     private renderTools(): React.ReactNode {
-        if (counterNameIsValid(this.state.counterName) && this.state.disabled) {
-            return "Loading...";
+        if (!counterNameIsValid(this.state.counterName)) {
+            return "Select or create a counter to continue.";
         };
+
+        if (this.state.disabled) {
+            return "Loading..."
+        }
 
         const inc = () => this.increment();
         const reset = () => this.reset();
@@ -137,10 +143,10 @@ class App extends React.Component<{}, IAppState> {
             <p>
                 Count: {lpad(this.state.count)}
             </p>
-            <ButtonToolbar>
-                {this.state.client ? <Button onClick={inc}>Increment</Button> : null}
-                {this.state.client ? <Button onClick={reset}>Reset</Button> : null}
-            </ButtonToolbar>
+            <DropdownButton title="Other actions" id="actions">
+                <MenuItem onClick={inc}>Increment</MenuItem>
+                <MenuItem onClick={reset}>Reset</MenuItem>
+            </DropdownButton>
         </div>;
     }
 
