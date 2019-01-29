@@ -147,14 +147,17 @@ class App extends React.Component<{}, IAppState> {
             <p>
                 Count: {lpad(this.state.count)}
             </p>
+            <hr />
             <form>
                 <FormGroup>
                     <FormLabel>Cost per increment</FormLabel>
                     <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
+                    <br />
                     <FormLabel>Effective date</FormLabel>
                     <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
                 </FormGroup>
             </form>
+            <hr />
             <DropdownButton title="Other actions" id="actions">
                 <MenuItem onClick={inc}>Increment</MenuItem>
                 <MenuItem onClick={reset}>Reset</MenuItem>

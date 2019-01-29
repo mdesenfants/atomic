@@ -14,5 +14,7 @@ namespace AtomicCounter.Models
         public IList<string> WriteKeys { get; set; } = new List<string>();
 
         public IList<string> ReadKeys { get; set; } = new List<string>();
+
+        public IList<IPriceChange> PriceChanges { get; set; } = new List<IPriceChange>();
     }
 }

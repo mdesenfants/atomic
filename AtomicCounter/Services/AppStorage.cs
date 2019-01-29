@@ -1,4 +1,5 @@
 ﻿using AtomicCounter.Models;
+using AtomicCounter.Models.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -20,6 +21,7 @@ namespace AtomicCounter.Services
         public const string CountQueueName = "increment-items";
         public const string ResetEventsQueueName = "reset-events";
         public const string RecreateEventsQueueName = "recreate-events";
+        public const string PriceChangeEventsQueueName = "price-change-events";
         public const string ProfilesKey = "profiles";
         public const string CountersKey = "counters";
 
@@ -51,6 +53,29 @@ namespace AtomicCounter.Services
             var queue = queueClient.GetQueueReference(RecreateEventsQueueName);
             var message = new CloudQueueMessage(counter);
             await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
+        }
+
+        public static async Task SendPriceChangeEventAsync(IPriceChange change)
+        {
+            var evt = new PriceChangeEvent()
+            {
+                Amount = change.Amount,
+                Counter = change.Counter,
+                Currency = change.Currency,
+                Effective = change.Effective ?? DateTimeOffset.UtcNow
+            };
+
+            var queueClient = Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
+            var message = new CloudQueueMessage(change.ToString());
+            await queue.AddMessageAsync(message);
+        }
+
+        public static async Task HandlePriceChangeEventAsync(PriceChangeEvent change)
+        {
+            var meta = await GetCounterMetadataAsync(change.Counter);
+            meta.PriceChanges.Add(change);
+            await SaveCounterMetadataAsync(meta);
         }
 
         public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token, ILogger log)
@@ -302,6 +327,13 @@ namespace AtomicCounter.Services
             return null;
         }
 
+        public static async Task SaveCounterMetadataAsync(Counter counter)
+        {
+            var blob = GetCounterMetadataContainer();
+            var block = blob.GetBlockBlobReference(counter.CounterName);
+            await block.UploadTextAsync(JsonConvert.SerializeObject(counter));
+        }
+
         private static CloudBlobContainer GetProfileContainer()
         {
             var blobClient = Storage.CreateCloudBlobClient();
@@ -338,8 +370,10 @@ namespace AtomicCounter.Services
             tasks.Add(table.CreateIfNotExistsAsync());
 
             var blobClient = Storage.CreateCloudBlobClient();
-            var blob = blobClient.GetContainerReference(CountersKey);
-            tasks.Add(blob.CreateIfNotExistsAsync());
+            var counters = blobClient.GetContainerReference(CountersKey);
+            var profiles = blobClient.GetContainerReference(ProfilesKey);
+            tasks.Add(counters.CreateIfNotExistsAsync());
+            tasks.Add(profiles.CreateIfNotExistsAsync());
 
             Task.WaitAll(tasks.ToArray());
         }
