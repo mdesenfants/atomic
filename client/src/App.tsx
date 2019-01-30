@@ -155,6 +155,7 @@ class App extends React.Component<{}, IAppState> {
                     <br />
                     <FormLabel>Effective date</FormLabel>
                     <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
+                    <Button>Submit change</Button>
                 </FormGroup>
             </form>
             <hr />

@@ -4,6 +4,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -139,6 +140,59 @@ namespace AtomicCounter.Services
             return await CountAsync(x =>
                 client.Equals(x.Client, StringComparison.OrdinalIgnoreCase) &&
                 DateInRange(x.Timestamp, min, max));
+        }
+
+        public async Task<Dictionary<string, Dictionary<DateTimeOffset, long>>> GetInvoiceDataAsync(DateTimeOffset min, DateTimeOffset max)
+        {
+            try
+            {
+                var table = GetCounterTable();
+
+                if (table == null)
+                {
+                    return new Dictionary<string, Dictionary<DateTimeOffset, long>>();
+                }
+
+                var meta = await AppStorage.GetCounterMetadataAsync(Counter);
+
+                // Make buckets by price change effective date, starting with 0
+                Dictionary<DateTimeOffset, long> getBuckets() => meta.PriceChanges.ToDictionary(x => x.Effective.Value, y => 0L);
+
+                // Create a sorted lookup so we classify records to their bucket quickly
+                var lookup = new SortedSet<DateTimeOffset>(meta.PriceChanges.Where(k => DateInRange(k.Timestamp, min, max)).Select(k => k.Timestamp));
+
+                var query = new TableQuery<CountEntity>()
+                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
+
+                var clients = new Dictionary<string, Dictionary<DateTimeOffset, long>>();
+
+                TableContinuationToken token = null;
+                do
+                {
+                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
+
+                    foreach (var result in resultSegment)
+                    {
+                        if (!clients.TryGetValue(result.Client, out var changes))
+                        {
+                            changes = getBuckets();
+                            clients[result.Client] = changes;
+                        }
+
+                        // Add count to bucket based on the first price change that is before the record timestamp
+                        changes[lookup.First(pc => pc <= result.Timestamp)] += result.Count;
+                    }
+
+                    token = resultSegment.ContinuationToken;
+                } while (token != null);
+
+                return clients;
+            }
+            catch
+            {
+                logger.LogWarning($"There was a problem counting {Counter}. Defaulting to 0.");
+                return new Dictionary<string, Dictionary<DateTimeOffset, long>>();
+            }
         }
     }
 
