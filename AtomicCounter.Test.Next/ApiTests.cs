@@ -4,7 +4,6 @@ using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using AtomicCounter.Models.ViewModels;
 using AtomicCounter.Services;
-using Castle.Core.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +15,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
@@ -67,18 +65,33 @@ namespace AtomicCounter.Test
 
             // Increment counter for client and time rnage
             var min = new DateTime(DateTime.UtcNow.Ticks, DateTimeKind.Utc);
-            await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
-            await SetPrice(mockAuth, req, counterViewModel.CounterName, logger);
+
+            await SetPrice(mockAuth, req, counterViewModel.CounterName, logger, 1);
             getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
             Assert.IsNotNull(getCounterViewModel.PriceChanges.SingleOrDefault());
             await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
-            Thread.Sleep(1000);
             await HandleCountEvents(logger);
+
+            await SetPrice(mockAuth, req, counterViewModel.CounterName, logger, 2);
+            getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
+            Assert.IsTrue(getCounterViewModel.PriceChanges.Count() == 2);
+            await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
+            await HandleCountEvents(logger);
+
             var max = DateTimeOffset.UtcNow;
 
+            // Check counts for different slices
             await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client count.", client: ClientName);
             await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Date count.", min: min, max: max);
             await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client and date count", min: min, max: max, client: ClientName);
+
+            // Get the invoice for the last 6 entries
+            var counterClient = new CountStorage(getCounterViewModel.CounterName, logger);
+            var invoice = await counterClient.GetInvoiceDataAsync(min, max);
+            Assert.AreEqual(1, invoice.Keys.Count());
+            var lines = invoice.Values.First();
+            Assert.AreEqual(2, lines.Count());
+            Assert.AreEqual(9, lines.Sum(l => l.Price * l.Quantity));
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
             await GetCount(mockAuth, req, logger, getCounterViewModel, 9, "First count.");
@@ -111,7 +124,7 @@ namespace AtomicCounter.Test
             await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.");
         }
 
-        private static async Task SetPrice(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, string counter, TestLogger logger)
+        private static async Task SetPrice(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, string counter, TestLogger logger, decimal amount)
         {
             SubmitPriceChange.AuthProvider = mockAuth.Object;
             req.Method = "POST";
@@ -119,7 +132,7 @@ namespace AtomicCounter.Test
             var change = JsonConvert.SerializeObject(new PriceChangeEvent()
             {
                 Counter = counter,
-                Amount = 2.0M,
+                Amount = amount,
                 Currency = "usd",
             });
 

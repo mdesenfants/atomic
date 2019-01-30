@@ -1,4 +1,5 @@
-﻿using AtomicCounter.Models.Events;
+﻿using AtomicCounter.Models;
+using AtomicCounter.Models.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -130,8 +131,10 @@ namespace AtomicCounter.Services
             return await CountAsync(x => DateInRange(x.Timestamp, min, max));
         }
 
-        private static bool DateInRange(DateTimeOffset timestamp, DateTimeOffset min, DateTimeOffset max)
+        private static bool DateInRange(DateTimeOffset? timestamp, DateTimeOffset min, DateTimeOffset max)
         {
+            if (timestamp == null) return false;
+
             return timestamp >= min && timestamp < max;
         }
 
@@ -142,7 +145,7 @@ namespace AtomicCounter.Services
                 DateInRange(x.Timestamp, min, max));
         }
 
-        public async Task<Dictionary<string, Dictionary<DateTimeOffset, long>>> GetInvoiceDataAsync(DateTimeOffset min, DateTimeOffset max)
+        public async Task<Dictionary<string, IEnumerable<ChargeGroup>>> GetInvoiceDataAsync(DateTimeOffset min, DateTimeOffset max)
         {
             try
             {
@@ -150,16 +153,22 @@ namespace AtomicCounter.Services
 
                 if (table == null)
                 {
-                    return new Dictionary<string, Dictionary<DateTimeOffset, long>>();
+                    return new Dictionary<string, IEnumerable<ChargeGroup>>();
                 }
 
                 var meta = await AppStorage.GetCounterMetadataAsync(Counter);
 
+                // Create a sorted lookup so we classify records to their bucket quickly
+                var lookup = new SortedSet<DateTimeOffset>(
+                    meta
+                        .PriceChanges.Where(k => DateInRange(k.Effective, min, max)).Select(k => k.Effective.Value))
+                    .Reverse();
+
+                // Create price lookup
+                var prices = meta.PriceChanges.ToDictionary(x => x.Effective, y => y.Amount);
+
                 // Make buckets by price change effective date, starting with 0
                 Dictionary<DateTimeOffset, long> getBuckets() => meta.PriceChanges.ToDictionary(x => x.Effective.Value, y => 0L);
-
-                // Create a sorted lookup so we classify records to their bucket quickly
-                var lookup = new SortedSet<DateTimeOffset>(meta.PriceChanges.Where(k => DateInRange(k.Timestamp, min, max)).Select(k => k.Timestamp));
 
                 var query = new TableQuery<CountEntity>()
                     .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
@@ -170,8 +179,8 @@ namespace AtomicCounter.Services
                 do
                 {
                     var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
-
-                    foreach (var result in resultSegment)
+                    var filtered = resultSegment.Where(r => DateInRange(r.Timestamp, min, max) && !string.IsNullOrEmpty(r.Client));
+                    foreach (var result in filtered)
                     {
                         if (!clients.TryGetValue(result.Client, out var changes))
                         {
@@ -180,18 +189,27 @@ namespace AtomicCounter.Services
                         }
 
                         // Add count to bucket based on the first price change that is before the record timestamp
-                        changes[lookup.First(pc => pc <= result.Timestamp)] += result.Count;
+                        var bucket = lookup.FirstOrDefault(pc => pc <= result.Timestamp);
+                        if (bucket > DateTimeOffset.MinValue)
+                        {
+                            changes[bucket] += result.Count;
+                        }
                     }
 
                     token = resultSegment.ContinuationToken;
                 } while (token != null);
 
-                return clients;
+                return clients.ToDictionary(c => c.Key, v => v.Value.Select(x => new ChargeGroup()
+                {
+                    Effective = x.Key,
+                    Price = prices[x.Key],
+                    Quantity = x.Value
+                }).Where(y => y.Quantity != 0));
             }
             catch
             {
                 logger.LogWarning($"There was a problem counting {Counter}. Defaulting to 0.");
-                return new Dictionary<string, Dictionary<DateTimeOffset, long>>();
+                throw;
             }
         }
     }
