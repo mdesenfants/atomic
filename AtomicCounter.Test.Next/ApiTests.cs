@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
 using UserAuthDelegate = System.Func<AtomicCounter.Models.UserProfile, System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
@@ -64,14 +65,17 @@ namespace AtomicCounter.Test
             // Increment counter for client and time rnage
             var min = new DateTime(DateTime.UtcNow.Ticks, DateTimeKind.Utc);
             await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
+            await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
+            Thread.Sleep(1000);
             await HandleCountEvent(logger);
             var max = DateTimeOffset.UtcNow;
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Client count.", client: ClientName);
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Date count.", min: min, max: max);
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Client and date count", min: min, max: max, client: ClientName);
+
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client count.", client: ClientName);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Date count.", min: min, max: max);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client and date count", min: min, max: max, client: ClientName);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "First count.");
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 9, "First count.");
 
             // Rotate read keys
             await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1);
@@ -92,7 +96,7 @@ namespace AtomicCounter.Test
             await HandleCountEvent(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 9, "Count after rotation.");
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 12, "Count after rotation.");
 
             // Should reset count to zero
             await RunResetCounter(mockAuth, req, logger);
@@ -169,13 +173,18 @@ namespace AtomicCounter.Test
         {
             var queueClient = Initialize.Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference("increment-items");
-            var countEvents = await queue.GetMessagesAsync(2);
 
-            foreach (var evt in countEvents)
+            do
             {
-                await IncrementEventHandler.Run(JsonConvert.DeserializeObject<IncrementEvent>(evt.AsString), logger);
-                await queue.DeleteMessageAsync(evt);
-            }
+                var countEvents = await queue.GetMessagesAsync(30);
+                if (countEvents == null || countEvents.Count() == 0) return;
+
+                foreach (var evt in countEvents)
+                {
+                    await IncrementEventHandler.Run(JsonConvert.DeserializeObject<IncrementEvent>(evt.AsString), logger);
+                    await queue.DeleteMessageAsync(evt);
+                }
+            } while (true);
         }
 
         private static async Task Increment(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, string client = null)
