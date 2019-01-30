@@ -4,6 +4,7 @@ using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using AtomicCounter.Models.ViewModels;
 using AtomicCounter.Services;
+using Castle.Core.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,9 @@ using Moq;
 using Newtonsoft.Json;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AppAuthDelegate = System.Func<System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult>>;
@@ -57,7 +60,7 @@ namespace AtomicCounter.Test
             await Increment(mockAuth, req, logger, getCounterViewModel);
 
             // Handle count event
-            await HandleCountEvent(logger);
+            await HandleCountEvents(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
             await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "First count.");
@@ -65,9 +68,12 @@ namespace AtomicCounter.Test
             // Increment counter for client and time rnage
             var min = new DateTime(DateTime.UtcNow.Ticks, DateTimeKind.Utc);
             await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
+            await SetPrice(mockAuth, req, counterViewModel.CounterName, logger);
+            getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
+            Assert.IsNotNull(getCounterViewModel.PriceChanges.SingleOrDefault());
             await Increment(mockAuth, req, logger, getCounterViewModel, ClientName);
             Thread.Sleep(1000);
-            await HandleCountEvent(logger);
+            await HandleCountEvents(logger);
             var max = DateTimeOffset.UtcNow;
 
             await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client count.", client: ClientName);
@@ -93,7 +99,7 @@ namespace AtomicCounter.Test
             await Increment(mockAuth, req, logger, getCounterViewModel);
 
             // Handle count event
-            await HandleCountEvent(logger);
+            await HandleCountEvents(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
             await GetCount(mockAuth, req, logger, getCounterViewModel, 12, "Count after rotation.");
@@ -103,6 +109,41 @@ namespace AtomicCounter.Test
 
             // Makes sure counter was reset
             await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.");
+        }
+
+        private static async Task SetPrice(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, string counter, TestLogger logger)
+        {
+            SubmitPriceChange.AuthProvider = mockAuth.Object;
+            req.Method = "POST";
+
+            var change = JsonConvert.SerializeObject(new PriceChangeEvent()
+            {
+                Counter = counter,
+                Amount = 2.0M,
+                Currency = "usd",
+            });
+
+            using (var body = new MemoryStream(Encoding.UTF8.GetBytes(change)))
+            {
+                req.Body = body;
+                var readRotateResult = (AcceptedResult)await SubmitPriceChange.Run(req, counter, logger);
+                Assert.IsNotNull(readRotateResult);
+            }
+
+            var queueClient = Initialize.Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference(AppStorage.PriceChangeEventsQueueName);
+
+            do
+            {
+                var countEvents = await queue.GetMessagesAsync(30);
+                if (countEvents == null || countEvents.Count() == 0) return;
+
+                foreach (var evt in countEvents)
+                {
+                    await PriceChangeEventHandler.Run(JsonConvert.DeserializeObject<PriceChangeEvent>(evt.AsString), logger);
+                    await queue.DeleteMessageAsync(evt);
+                }
+            } while (true);
         }
 
         private static async Task<CounterViewModel> AddCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
@@ -169,10 +210,10 @@ namespace AtomicCounter.Test
             }
         }
 
-        private static async Task HandleCountEvent(TestLogger logger)
+        private static async Task HandleCountEvents(TestLogger logger)
         {
             var queueClient = Initialize.Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference("increment-items");
+            var queue = queueClient.GetQueueReference(AppStorage.CountQueueName);
 
             do
             {

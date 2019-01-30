@@ -365,6 +365,9 @@ namespace AtomicCounter.Services
             var createQueue = queueClient.GetQueueReference(RecreateEventsQueueName);
             tasks.Add(createQueue.CreateIfNotExistsAsync());
 
+            var priceChangeQueue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
+            tasks.Add(priceChangeQueue.CreateIfNotExistsAsync());
+
             var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
             tasks.Add(table.CreateIfNotExistsAsync());

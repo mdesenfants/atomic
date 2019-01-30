@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AtomicCounter.Models.Events;
+using System;
 using System.Collections.Generic;
 
 namespace AtomicCounter.Models
@@ -15,6 +16,6 @@ namespace AtomicCounter.Models
 
         public IList<string> ReadKeys { get; set; } = new List<string>();
 
-        public IList<IPriceChange> PriceChanges { get; set; } = new List<IPriceChange>();
+        public IList<PriceChangeEvent> PriceChanges { get; set; } = new List<PriceChangeEvent>();
     }
 }
