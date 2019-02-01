@@ -9,7 +9,7 @@ namespace AtomicCounter.Timers
 {
     public static class Antidote
     {
-        private const string everyFiveMinutes = "*/5 * * * *";
+        private const string everyFiveMinutes = "* */5 * * * *";
 
         [FunctionName("Antidote")]
         public static async Task Run(

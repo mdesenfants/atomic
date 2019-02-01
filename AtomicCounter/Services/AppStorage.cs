@@ -22,6 +22,7 @@ namespace AtomicCounter.Services
         public const string ResetEventsQueueName = "reset-events";
         public const string RecreateEventsQueueName = "recreate-events";
         public const string PriceChangeEventsQueueName = "price-change-events";
+        public const string InvoicRequestEventsQueueName = "invoice-request-events";
         public const string ProfilesKey = "profiles";
         public const string CountersKey = "counters";
 
@@ -69,6 +70,22 @@ namespace AtomicCounter.Services
             var queue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
             var message = new CloudQueueMessage(change.ToString());
             await queue.AddMessageAsync(message);
+        }
+
+        public static async Task SendInvoiceRequestEventAsync(string counter, DateTimeOffset min, DateTimeOffset max)
+        {
+            var queueClient = Storage.CreateCloudQueueClient();
+            var queue = queueClient.GetQueueReference(InvoicRequestEventsQueueName);
+
+            var invoiceEvent = new InvoiceRequestEvent()
+            {
+                Counter = counter,
+                Min = min,
+                Max = max
+            };
+
+            var message = new CloudQueueMessage(invoiceEvent.ToString());
+            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
         }
 
         public static async Task HandlePriceChangeEventAsync(PriceChangeEvent change)
@@ -340,7 +357,7 @@ namespace AtomicCounter.Services
             return blobClient.GetContainerReference(ProfilesKey);
         }
 
-        private static CloudBlobContainer GetCounterMetadataContainer()
+        public static CloudBlobContainer GetCounterMetadataContainer()
         {
             var blobClient = Storage.CreateCloudBlobClient();
             return blobClient.GetContainerReference(CountersKey);
