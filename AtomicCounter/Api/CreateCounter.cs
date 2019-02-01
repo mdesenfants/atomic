@@ -33,7 +33,6 @@ namespace AtomicCounter.Api
                     return new OkObjectResult(new CounterViewModel()
                     {
                         CounterName = existing.CounterName,
-                        Origins = existing.Origins,
                         ReadKeys = existing.ReadKeys
                                 .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
                         WriteKeys = existing.WriteKeys

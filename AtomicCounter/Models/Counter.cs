@@ -1,4 +1,6 @@
 ﻿using AtomicCounter.Models.Events;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 
@@ -8,6 +10,7 @@ namespace AtomicCounter.Models
     {
         Never,
         Weekly,
+        EveryOtherWeek,
         TwiceMonthly,
         Monthly,
         Quarterly,
@@ -24,7 +27,9 @@ namespace AtomicCounter.Models
         public IList<PriceChangeEvent> PriceChanges { get; set; } = new List<PriceChangeEvent>();
         public DateTimeOffset LastInvoiceRun { get; set; } = DateTimeOffset.MinValue;
         public DateTimeOffset NextInvoiceRun { get; set; } = DateTimeOffset.MaxValue;
-        public InvoiceFrequency InvoiceFrequency { get; set; } = InvoiceFrequency.Never;
         public bool AutoSubmit { get; set; } = false;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public InvoiceFrequency InvoiceFrequency { get; set; } = InvoiceFrequency.Never;
     }
 }

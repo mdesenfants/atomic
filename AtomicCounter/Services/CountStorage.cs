@@ -33,7 +33,7 @@ namespace AtomicCounter.Services
                 Counter = Counter,
                 Count = count,
                 Client = client
-            }.ToString());
+            }.ToJson());
 
             await queue.AddMessageAsync(message);
         }

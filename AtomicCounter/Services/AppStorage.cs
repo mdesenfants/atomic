@@ -68,7 +68,7 @@ namespace AtomicCounter.Services
 
             var queueClient = Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
-            var message = new CloudQueueMessage(change.ToString());
+            var message = new CloudQueueMessage(change.ToJson());
             await queue.AddMessageAsync(message);
         }
 
@@ -84,8 +84,8 @@ namespace AtomicCounter.Services
                 Max = max
             };
 
-            var message = new CloudQueueMessage(invoiceEvent.ToString());
-            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
+            var message = new CloudQueueMessage(invoiceEvent.ToJson());
+            await queue.AddMessageAsync(message);
         }
 
         public static async Task HandlePriceChangeEventAsync(PriceChangeEvent change)
@@ -294,6 +294,15 @@ namespace AtomicCounter.Services
 
                 return newCounter;
             }
+        }
+
+        public static async Task SaveInvoiceAsync(string counter, string client, DateTimeOffset min, DateTimeOffset max, IEnumerable<ChargeGroup> invoice)
+        {
+            var blobClient = Storage.CreateCloudBlobClient();
+            var container = blobClient.GetContainerReference($"{counter}/{client}");
+            var ranges = Uri.EscapeDataString(min.ToString("o")) + "-" + Uri.EscapeDataString(max.ToString("o")) + ".json";
+            var blob = container.GetBlockBlobReference(ranges);
+            await blob.UploadTextAsync(invoice.ToJson());
         }
 
         private static string RandomString()

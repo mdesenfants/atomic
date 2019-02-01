@@ -1,3 +1,4 @@
+using AtomicCounter.Models;
 using AtomicCounter.Services;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,7 @@ namespace AtomicCounter.Timers
     public static class StartInvoices
     {
         [FunctionName(nameof(StartInvoices))]
-        public static async Task Run([TimerTrigger("0 5 */1 * * *")]TimerInfo myTimer, ILogger log)
+        public static async Task Run([TimerTrigger("0 5 */1 * * *")]TimerInfo timer, ILogger log)
         {
             log.LogInformation($"Generating invoices starting at: {DateTime.Now}");
 
@@ -25,8 +26,16 @@ namespace AtomicCounter.Timers
 
                 foreach (var record in segment.Results.OfType<CloudBlockBlob>())
                 {
-                    // Check last & next invoice generation date
-                    // If next is past, update dates and submit range to queue
+                    var counter = await AppStorage.GetCounterMetadataAsync(record.Name);
+
+                    if (counter.InvoiceFrequency == InvoiceFrequency.Never ||
+                        counter.NextInvoiceRun > DateTimeOffset.Now ||
+                        !counter.PriceChanges.Any())
+                    {
+                        return;
+                    }
+
+                    await AppStorage.SendInvoiceRequestEventAsync(counter.CounterName, counter.LastInvoiceRun, counter.NextInvoiceRun);
                 }
             } while (token != null);
         }

@@ -153,7 +153,7 @@ namespace AtomicCounter.Test
 
                 foreach (var evt in countEvents)
                 {
-                    await PriceChangeEventHandler.Run(JsonConvert.DeserializeObject<PriceChangeEvent>(evt.AsString), logger);
+                    await PriceChangeEventHandler.Run(evt.AsString.FromJson<PriceChangeEvent>(), logger);
                     await queue.DeleteMessageAsync(evt);
                 }
             } while (true);
