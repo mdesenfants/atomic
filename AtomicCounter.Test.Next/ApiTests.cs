@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Newtonsoft.Json;
 using System;
 using System.Globalization;
 using System.IO;
@@ -129,12 +128,12 @@ namespace AtomicCounter.Test
             SubmitPriceChange.AuthProvider = mockAuth.Object;
             req.Method = "POST";
 
-            var change = JsonConvert.SerializeObject(new PriceChangeEvent()
+            var change = new PriceChangeEvent()
             {
                 Counter = counter,
                 Amount = amount,
                 Currency = "usd",
-            });
+            }.ToJson();
 
             using (var body = new MemoryStream(Encoding.UTF8.GetBytes(change)))
             {
@@ -235,7 +234,7 @@ namespace AtomicCounter.Test
 
                 foreach (var evt in countEvents)
                 {
-                    await IncrementEventHandler.Run(JsonConvert.DeserializeObject<IncrementEvent>(evt.AsString), logger);
+                    await IncrementEventHandler.Run(evt.AsString.FromJson<IncrementEvent>(), logger);
                     await queue.DeleteMessageAsync(evt);
                 }
             } while (true);

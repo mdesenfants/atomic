@@ -1,9 +1,7 @@
-﻿using AtomicCounter.Services;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.WindowsAzure.Storage;
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace AtomicCounter.Test
 {
@@ -15,7 +13,7 @@ namespace AtomicCounter.Test
         public static CloudStorageAccount Storage;
 
         [AssemblyInitialize]
-        public static async Task AssemblyInitialize(TestContext context)
+        public static void AssemblyInitialize(TestContext context)
         {
             const string store = @"C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe";
 

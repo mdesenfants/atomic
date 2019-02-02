@@ -8,7 +8,7 @@ namespace AtomicCounter
     {
         public static string ToJson<T>(this T input)
         {
-            return JsonConvert.SerializeObject(input);
+            return input.ToJson();
         }
 
         public static T FromJson<T>(this string input)

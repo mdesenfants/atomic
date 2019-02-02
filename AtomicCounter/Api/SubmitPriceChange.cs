@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
@@ -33,7 +32,7 @@ namespace AtomicCounter.Api
                     using (var str = new StreamReader(req.Body))
                     {
                         var body = await str.ReadToEndAsync();
-                        var change = JsonConvert.DeserializeObject<PriceChangeEvent>(body);
+                        var change = body.FromJson<PriceChangeEvent>();
 
                         var vc = new ValidationContext(change);
                         var errors = new List<ValidationResult>();

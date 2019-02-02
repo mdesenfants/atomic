@@ -5,7 +5,6 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -188,7 +187,7 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CounterName);
 
-            await block.UploadTextAsync(JsonConvert.SerializeObject(counter));
+            await block.UploadTextAsync(counter.ToJson());
 
             return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CounterName, x)).ToArray();
         }
@@ -223,7 +222,7 @@ namespace AtomicCounter.Services
             {
                 var blob = GetProfileContainer();
                 var block = blob.GetBlockBlobReference(resEntity.ProfileId.ToString());
-                return JsonConvert.DeserializeObject<UserProfile>(await block.DownloadTextAsync());
+                return (await block.DownloadTextAsync()).FromJson<UserProfile>();
             }
         }
 
@@ -231,7 +230,7 @@ namespace AtomicCounter.Services
         {
             var blob = GetProfileContainer();
             var block = blob.GetBlockBlobReference(profile.Id.ToString());
-            await block.UploadTextAsync(JsonConvert.SerializeObject(profile));
+            await block.UploadTextAsync(profile.ToJson());
         }
 
         public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
@@ -247,7 +246,7 @@ namespace AtomicCounter.Services
 
             if (await block.ExistsAsync())
             {
-                var existing = JsonConvert.DeserializeObject<Counter>(await block.DownloadTextAsync());
+                var existing = (await block.DownloadTextAsync()).FromJson<Counter>();
                 return existing.Profiles.Contains(profile.Id) ? existing : null;
             }
             else
@@ -270,7 +269,7 @@ namespace AtomicCounter.Services
                 try
                 {
                     var tasks = new[] {
-                        block.UploadTextAsync(JsonConvert.SerializeObject(newCounter)),
+                        block.UploadTextAsync(newCounter.ToJson()),
                         table.CreateIfNotExistsAsync(),
                     };
 
@@ -347,7 +346,7 @@ namespace AtomicCounter.Services
 
             if (await block.ExistsAsync())
             {
-                return JsonConvert.DeserializeObject<Counter>(await block.DownloadTextAsync());
+                return (await block.DownloadTextAsync()).FromJson<Counter>();
             }
 
             return null;
@@ -357,7 +356,7 @@ namespace AtomicCounter.Services
         {
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CounterName);
-            await block.UploadTextAsync(JsonConvert.SerializeObject(counter));
+            await block.UploadTextAsync(counter.ToJson());
         }
 
         private static CloudBlobContainer GetProfileContainer()
