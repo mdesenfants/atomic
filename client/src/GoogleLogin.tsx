@@ -2,8 +2,6 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './GoogleLogin.css';
 
-import Button from 'react-bootstrap/Button';
-
 interface IGoogleProps {
     tokenCallback: (token: any) => void;
 }
@@ -44,7 +42,7 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
         const callback = this.signIn.bind(this);
 
         return (
-            <Button onClick={callback}>Sign in with Google</Button>
+            <button onClick={callback}>Sign in with Google</button>
         );
     }
 

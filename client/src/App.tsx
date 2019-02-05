@@ -2,9 +2,6 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './App.css';
 
-import { Button, Col, Container, DropdownButton, FormControl, FormGroup, FormLabel, Row } from 'react-bootstrap';
-import MenuItem from 'react-bootstrap/DropdownItem'
-
 import { AtomicCounterClient, counterNameIsValid, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
 
 import GoogleLogin from './GoogleLogin';
@@ -75,18 +72,18 @@ class App extends React.Component<{}, IAppState> {
         const counter = () => this.createCounter();
 
         const counterToLi = (input: string) =>
-            <MenuItem key={input} onClick={selectCounter(input)} active={this.state.counterName === input}>
+            <li key={input} onClick={selectCounter(input)}>
                 {input}
-            </MenuItem>;
+            </li>;
 
-        return <Container>
+        return <div>
             <div className="header clearfix">
                 <h1 className="page-header">
                     Atomic Counter
                 </h1>
             </div>
-            <Row>
-                <Col>
+            <div>
+                <div>
                     {this.state.client ?
                         <div className="form-group">
                             <div className="input-group">
@@ -104,26 +101,26 @@ class App extends React.Component<{}, IAppState> {
                                 <div
                                     className="input-group-append"
                                     hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
-                                    <Button className="btn btn-success" onClick={counter}>Create Counter</Button>
+                                    <button className="btn btn-success" onClick={counter}>Create Counter</button>
                                 </div>
-                                <DropdownButton className="input-group-append" title="Select a counter" id="existing">
+                                <div className="input-group-append" title="Select a counter" id="existing">
                                     {this.state.otherCounters.map(counterToLi)}
-                                </DropdownButton>
+                                </div>
                             </div>
                         </div> : null}
-                </Col>
-            </Row>
-            <Row>
-                <Col>
+                </div>
+            </div>
+            <div>
+                <div>
                     {this.state.client ? null : <GoogleLogin tokenCallback={callback} />}
-                </Col>
-            </Row>
-            <Row>
-                <Col>
+                </div>
+            </div>
+            <div>
+                <div>
                     {this.state.client ? this.renderTools() : null}
-                </Col>
-            </Row>
-        </Container>;
+                </div>
+            </div>
+        </div>;
     }
 
     private renderTools(): React.ReactNode {
@@ -149,20 +146,18 @@ class App extends React.Component<{}, IAppState> {
             </p>
             <hr />
             <form>
-                <FormGroup>
-                    <FormLabel>Cost per increment</FormLabel>
-                    <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
+                    <label>Cost per increment</label>
+                    <input type="text" pattern="[0-9]+.?[0-9]?" />
                     <br />
-                    <FormLabel>Effective date</FormLabel>
-                    <FormControl type="text" pattern="[0-9]+.?[0-9]?" />
-                    <Button>Submit change</Button>
-                </FormGroup>
+                    <label>Effective date</label>
+                    <input type="text" pattern="[0-9]+.?[0-9]?" />
+                    <button>Submit change</button>
             </form>
             <hr />
-            <DropdownButton title="Other actions" id="actions">
-                <MenuItem onClick={inc}>Increment</MenuItem>
-                <MenuItem onClick={reset}>Reset</MenuItem>
-            </DropdownButton>
+            <div title="Other actions" id="actions">
+                <button onClick={inc}>Increment</button>
+                <button onClick={reset}>Reset</button>
+            </div>
         </div>;
     }
 
