@@ -2,12 +2,16 @@ import * as hello from 'hellojs';
 import * as React from 'react';
 import './GoogleLogin.css';
 
+import { Button } from '@material-ui/core';
+
 interface IGoogleProps {
     tokenCallback: (token: any) => void;
+    hidden: boolean | null | undefined;
 }
 
 interface IGoogleState {
     tokenCallback: (token: any) => void;
+    hidden: boolean;
 }
 
 export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleState> {
@@ -23,7 +27,10 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
 
     constructor(props: IGoogleProps) {
         super(props);
-        this.state = { tokenCallback: props.tokenCallback };
+        this.state = {
+            hidden: props.hidden ? props.hidden : false,
+            tokenCallback: props.tokenCallback,
+        };
     }
 
     public componentDidMount() {
@@ -42,7 +49,11 @@ export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleSt
         const callback = this.signIn.bind(this);
 
         return (
-            <button onClick={callback}>Sign in with Google</button>
+            <Button
+                variant="text"
+                hidden={this.state.hidden} onClick={callback}>
+                LOGIN
+            </Button>
         );
     }
 
