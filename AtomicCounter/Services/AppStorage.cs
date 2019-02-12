@@ -192,14 +192,15 @@ namespace AtomicCounter.Services
             return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CounterName, x)).ToArray();
         }
 
-        public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid)
+        public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid, string token)
         {
             var tableClient = Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
 
             var refEntity = new ProfileMappingEntity()
             {
-                Sid = sid
+                Sid = sid,
+                Token = token
             };
 
             var op = TableOperation.Retrieve<ProfileMappingEntity>(refEntity.PartitionKey, refEntity.RowKey);

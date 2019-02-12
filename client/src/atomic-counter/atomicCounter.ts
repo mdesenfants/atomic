@@ -17,7 +17,7 @@ export async function increment(counter: string, key: string): Promise<void> {
         console.warn("Must provide a write key. Returning without increment.");
         return await Promise.resolve();
     }
-    
+
     await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/increment?key=${key}`, {
         headers: {
             "Accept": "application/json",
@@ -49,22 +49,6 @@ export async function count(counter: string, key: string): Promise<number> {
     }).then(v => v.json() as unknown as number);
 }
 
-export async function getAuthToken(token: string, provider: string): Promise<string> {
-    const response = await fetch(`https://atomiccounter.azurewebsites.net/.auth/login/${provider}`, {
-        body: JSON.stringify({
-            id_token: token
-        }),
-        headers: {
-            "Content-Type": "application/json"
-        },
-        method: "POST",
-    });
-
-    const ez = await response.json();
-
-    return ez.authenticationToken as string;
-}
-
 export function counterNameIsValid(input: string): boolean {
     return input.length > 3 && input.length < 54 && /[a-z0-9]+/.test(input)
 }
@@ -86,13 +70,13 @@ export class AtomicCounterClient {
         return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
             headers: {
                 "Accept": "application/json",
+                "Authorization": 'Bearer ' + await this.token(),
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": await this.token()
             },
             method: "POST"
         })
-        .then(t => t.json() as unknown as ICounter)
-        .catch(() => null);
+            .then(t => t.json() as unknown as ICounter)
+            .catch(() => null);
     }
 
     public async getCounter(counter: string) {
@@ -105,21 +89,21 @@ export class AtomicCounterClient {
         return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
             headers: {
                 "Accept": "application/json",
+                "Authorization": 'Bearer ' + await this.token(),
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": await this.token()
             },
             method: "GET",
         })
-        .then(t => t.json() as unknown as ICounter)
-        .catch(null);
+            .then(t => t.json() as unknown as ICounter)
+            .catch(null);
     }
 
     public async getCounters() {
         return await fetch('https://atomiccounter.azurewebsites.net/api/counters', {
             headers: {
                 "Accept": "application/json",
+                "Authorization": 'Bearer ' + await this.token(),
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": await this.token()
             },
             method: "GET",
         }).then(t => t.json() as unknown as string[]);
@@ -134,7 +118,7 @@ export class AtomicCounterClient {
 
         const meta = await this.getCounter(counter);
         const key = meta ? meta.writeKeys[0] : null;
-        
+
         if (!key) {
             // tslint:disable-next-line:no-console
             console.warn("No write keys found. Returning early without incrementing.");
@@ -153,7 +137,7 @@ export class AtomicCounterClient {
 
         const meta = await this.getCounter(counter);
         const key = meta ? meta.readKeys[0] : null;
-        
+
         if (!key) {
             // tslint:disable-next-line:no-console
             console.warn("Could not find read keys. Returning 0.");
@@ -169,12 +153,12 @@ export class AtomicCounterClient {
             console.warn("Counter name must be valid before resetting. Returning without reset.");
             return await Promise.resolve();
         }
-        
+
         await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/reset`, {
             headers: {
                 "Accept": "application/json",
+                "Authorization": 'Bearer ' + await this.token(),
                 "Content-Type": "application/json",
-                "X-ZUMO-AUTH": await this.token()
             },
             method: "POST",
         });

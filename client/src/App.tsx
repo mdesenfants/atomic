@@ -1,8 +1,7 @@
-import * as hello from 'hellojs';
 import * as React from 'react';
 import './App.css';
 
-import { AtomicCounterClient, counterNameIsValid, getAuthToken } from './atomic-counter/build/dist/atomicCounter';
+import { AtomicCounterClient, counterNameIsValid } from './atomic-counter/build/dist/atomicCounter';
 
 import { AppBar, CssBaseline, Paper, Toolbar } from '@material-ui/core';
 import Grid from '@material-ui/core/Grid';
@@ -10,11 +9,6 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 
 import GoogleLogin from './GoogleLogin';
-
-
-hello.init({
-    google: '1076081007580-rabmg87rit0dcdcc6m29pecc35i0lj5p.apps.googleusercontent.com'
-});
 
 interface IAppState {
     client: AtomicCounterClient | null;
@@ -50,7 +44,7 @@ class App extends React.Component<{}, IAppState> {
 
     public render() {
         const callback = (value: any) => {
-            const curr = new AtomicCounterClient(() => getAuthToken(value, 'google'));
+            const curr = new AtomicCounterClient(() => Promise.resolve(window.localStorage.getItem('strip_token') || ''));
             curr.getCounters().then(x => {
                 this.setState({ client: curr, otherCounters: x })
             });
@@ -85,51 +79,52 @@ class App extends React.Component<{}, IAppState> {
             </p>;
 
         return (
-            <div className="container">
-                <CssBaseline />
-                <Grid container={true} spacing={24}>
-                    <Grid item={true} xs={12}>
-                        <AppBar position="static" color="default">
-                            <Toolbar>
-                                <Grid container={true} justify="space-between">
-                                    <Grid item={true}>
-                                        <Typography variant="h6" color="inherit">
-                                            Atomic Counter
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item={true}>
-                                        <GoogleLogin hidden={!this.state.client} tokenCallback={callback} />
-                                    </Grid>
-                                </Grid>
-                            </Toolbar>
-                        </AppBar>
-                    </Grid>
-                    <Grid item={true} xs={3}>
-                        <Typography variant="h6">Counters</Typography>
-                        <TextField
-                            id="standard-with-placeholder"
-                            placeholder="Search counters"
-                            margin="normal"
-                            value={this.state.counterName}
-                            onChange={handle}
-                        />
-                        <button
-                            onClick={counter}
-                            hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
-                            Create Counter
+            <React.Fragment>
+                <AppBar position="static" color="default">
+                    <Toolbar>
+                        <Grid container={true} justify="space-between">
+                            <Grid item={true}>
+                                <Typography variant="h6" color="inherit">
+                                    Atomic Counter
+                                </Typography>
+                            </Grid>
+                            <Grid item={true}>
+                                <GoogleLogin tokenCallback={callback} />
+                            </Grid>
+                        </Grid>
+                    </Toolbar>
+                </AppBar>
+                <div className="container">
+                    <CssBaseline />
+
+                    <Grid container={true} spacing={24}>
+                        <Grid item={true} xs={3}>
+                            <Typography variant="h6">Counters</Typography>
+                            <TextField
+                                id="standard-with-placeholder"
+                                placeholder="Search counters"
+                                margin="normal"
+                                value={this.state.counterName}
+                                onChange={handle}
+                            />
+                            <button
+                                onClick={counter}
+                                hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
+                                Create Counter
                         </button>
-                        {
-                            this.state.otherCounters
-                                .filter(oc => oc.startsWith(this.state.counterName) && oc !== this.state.counterName)
-                                .sort()
-                                .map(counterToLi)
-                        }
+                            {
+                                this.state.otherCounters
+                                    .filter(oc => oc.startsWith(this.state.counterName) && oc !== this.state.counterName)
+                                    .sort()
+                                    .map(counterToLi)
+                            }
+                        </Grid>
+                        <Grid item={true} xs={9}>
+                            {this.renderTools()}
+                        </Grid>
                     </Grid>
-                    <Grid item={true} xs={9}>
-                        {this.renderTools()}
-                    </Grid>
-                </Grid>
-            </div >
+                </div >
+            </React.Fragment>
         );
     }
 

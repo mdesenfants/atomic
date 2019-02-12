@@ -1,4 +1,3 @@
-import * as hello from 'hellojs';
 import * as React from 'react';
 import './GoogleLogin.css';
 
@@ -6,65 +5,52 @@ import { Button } from '@material-ui/core';
 
 interface IGoogleProps {
     tokenCallback: (token: any) => void;
-    hidden: boolean | null | undefined;
 }
 
 interface IGoogleState {
     tokenCallback: (token: any) => void;
-    hidden: boolean;
 }
 
+const tokenLocation = 'strip_token';
+
 export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleState> {
-    private static async getGoogleToken(): Promise<string | null> {
-        const value = await hello('google').login({
-            force: false,
-            response_type: 'id_token token',
-            scope: 'openid'
-        });
-
-        return value.authResponse ? value.authResponse.id_token ? value.authResponse.id_token : null : null;
-    }
-
     constructor(props: IGoogleProps) {
         super(props);
+
         this.state = {
-            hidden: props.hidden ? props.hidden : false,
             tokenCallback: props.tokenCallback,
         };
-    }
-
-    public componentDidMount() {
-        const goog = sessionStorage.getItem('googleToken');
-        if (goog) {
-            GoogleLogin.getGoogleToken().then(x => {
-                if (x) {
-                    sessionStorage.setItem('googleToken', x);
-                    this.state.tokenCallback(x);
-                }
-            });
-        }
     }
 
     public render() {
         const callback = this.signIn.bind(this);
 
+        if (window.location.search) {
+            const query = new URLSearchParams(window.location.search);
+            window.localStorage.setItem(tokenLocation, query.get('code') || '');
+            window.location.replace('/');
+        } else {
+            const token = window.localStorage.getItem(tokenLocation);
+
+            if (token && token !== "") {
+                this.state.tokenCallback(token);
+            }
+        }
+
         return (
             <Button
                 variant="text"
-                hidden={this.state.hidden} onClick={callback}>
+                onClick={callback}>
                 LOGIN
             </Button>
         );
     }
 
     private async signIn(): Promise<void> {
-        const goog = await GoogleLogin.getGoogleToken();
+        const clientId = encodeURIComponent('ca_EVLDOec67UuKVBalXSJId6dsZFPfcQMr');
+        const redirect = encodeURIComponent('http://localhost:3000/');
+        const scope = encodeURIComponent('read_write');
 
-        if (!goog) {
-            return;
-        }
-
-        sessionStorage.setItem('googleToken', goog);
-        this.state.tokenCallback(goog);
+        window.location.replace(`https://connect.stripe.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=${scope}`);
     }
 }

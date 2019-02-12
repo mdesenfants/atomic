@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using Stripe;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -19,6 +20,11 @@ namespace AtomicCounter
 
     public static class AuthorizationHelpers
     {
+        static AuthorizationHelpers()
+        {
+            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable("StripeKey"));
+        }
+
         public static string CombineAndHash(string a, string b)
         {
             HashAlgorithm sha = new SHA256Managed();
@@ -26,88 +32,72 @@ namespace AtomicCounter
             return Base64UrlEncoder.Encode(result);
         }
 
-        private static HttpClient _httpClient = new HttpClient(); // cache and reuse to avoid repeated creation on Function calls
-
-        /// <summary>
-        /// Find a claim of the specified type
-        /// </summary>
-        /// <param name="authInfo"></param>
-        /// <param name="claimType"></param>
-        /// <returns></returns>
-        public static AuthUserClaim GetClaim(this AuthInfo authInfo, string claimType)
-        {
-            return authInfo.UserClaims.FirstOrDefault(c => c.Type == claimType);
-        }
-
-        /// <summary>
-        /// Get the EasyAuth properties for the currently authenticated user
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
         public static async Task<AuthInfo> GetAuthInfoAsync(this HttpRequest request)
         {
-            var zumoAuthToken = request?.GetZumoAuthToken();
-            if (string.IsNullOrEmpty(zumoAuthToken))
+            var value = GetAuthToken(request);
+
+            if (string.IsNullOrWhiteSpace(value))
             {
-                return null;
+                throw new UnauthorizedAccessException();
             }
 
-            var authMeRequest = new HttpRequestMessage(HttpMethod.Get, GetEasyAuthEndpoint())
+            var first = value.IndexOf(' ') + 1;
+            var length = value.Length - first - 1;
+            var token = value.Substring(first, length);
+
+            if (token.Length == 0)
             {
-                Headers =
-                    {
-                        { "X-ZUMO-AUTH", zumoAuthToken }
-                    }
-            };
+                throw new InvalidOperationException();
+            }
 
-            var response = await _httpClient.SendAsync(authMeRequest);
-            var authInfoArray = await response?.Content?.ReadAsAsync<AuthInfo[]>();
-            return authInfoArray.Length >= 1 ? authInfoArray[0] : null; // The .auth/me content is a single item array if it is populated
+            var uri = new Uri($"https://connect.stripe.com/oauth/token?code={token}");
+
+            var client = HttpClientFactory.Create();
+            var secret = Environment.GetEnvironmentVariable("StripeSecKey");
+            var content = new StringContent($"client_secret=\"{secret}\"");
+
+            var response = await client.PostAsync(uri, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<AuthInfo>(await response.Content.ReadAsStringAsync());
+            }
+            else
+            {
+                throw new UnauthorizedAccessException();
+            }
         }
 
-        private static string GetEasyAuthEndpoint()
-        {
-            // Get the hostname from environment variables so that we don't need config - thank you App Service!
-            var hostname = Environment.GetEnvironmentVariable("WEBSITE_HOSTNAME");
-            // Build up the .auth/me url
-            var requestUri = $"https://{hostname}/.auth/me";
-            return requestUri;
-        }
+        private static readonly HttpClient _httpClient = new HttpClient();
 
-        private static string GetZumoAuthToken(this HttpRequest req)
+        private static string GetAuthToken(this HttpRequest req)
         {
-            var header = req.Headers["X-ZUMO-AUTH"];
+            var header = req.Headers["Authorization"];
             return header.FirstOrDefault();
         }
     }
 
-    public class AuthInfo // structure based on sample here: https://cgillum.tech/2016/03/07/app-service-token-store/
+    public class AuthInfo
     {
-        [JsonProperty("access_token", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty(PropertyName = "access_token")]
         public string AccessToken { get; set; }
-        [JsonProperty("provider_name", NullValueHandling = NullValueHandling.Ignore)]
-        public string ProviderName { get; set; }
-        [JsonProperty("user_id", NullValueHandling = NullValueHandling.Ignore)]
-        public string UserId { get; set; }
-        [JsonProperty("user_claims", NullValueHandling = NullValueHandling.Ignore)]
-        public AuthUserClaim[] UserClaims { get; set; }
-        [JsonProperty("access_token_secret", NullValueHandling = NullValueHandling.Ignore)]
-        public string AccessTokenSecret { get; set; }
-        [JsonProperty("authentication_token", NullValueHandling = NullValueHandling.Ignore)]
-        public string AuthenticationToken { get; set; }
-        [JsonProperty("expires_on", NullValueHandling = NullValueHandling.Ignore)]
-        public string ExpiresOn { get; set; }
-        [JsonProperty("id_token", NullValueHandling = NullValueHandling.Ignore)]
-        public string IdToken { get; set; }
-        [JsonProperty("refresh_token", NullValueHandling = NullValueHandling.Ignore)]
-        public string RefreshToken { get; set; }
-    }
 
-    public class AuthUserClaim
-    {
-        [JsonProperty("typ")]
-        public string Type { get; set; }
-        [JsonProperty("val")]
-        public string Value { get; set; }
+        [JsonProperty(PropertyName = "livemode")]
+        public string LiveMode { get; set; }
+
+        [JsonProperty(PropertyName = "refresh_token")]
+        public string RefreshToken { get; set; }
+
+        [JsonProperty(PropertyName = "token_type")]
+        public string TokenType { get; set; }
+
+        [JsonProperty(PropertyName = "stripe_publishable_key")]
+        public string PublishableKey { get; set; }
+
+        [JsonProperty(PropertyName = "stripe_user_id")]
+        public string UserId { get; set; }
+
+        [JsonProperty(PropertyName = "scope")]
+        public string Scope { get; set; }
     }
 }

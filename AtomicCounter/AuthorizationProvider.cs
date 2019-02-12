@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -65,16 +64,10 @@ namespace AtomicCounter
         {
             try
             {
-                var authenticated = Thread.CurrentPrincipal?.Identity?.IsAuthenticated ?? false;
-                if (authenticated)
-                {
-                    return new UnauthorizedResult();
-                }
-
                 var authInfo = await req?.GetAuthInfoAsync();
-                var userName = $"{authInfo.ProviderName}|{authInfo.GetClaim(ClaimTypes.NameIdentifier).Value}";
+                var userName = $"stripe|{authInfo.UserId}";
 
-                return await action(await AppStorage.GetOrCreateUserProfileAsync(userName));
+                return await action(await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken));
             }
             catch (InvalidOperationException)
             {
@@ -100,7 +93,10 @@ namespace AtomicCounter
                     // Throw unauthorized exception here when necessary
                     var meta = await AppStorage.GetCounterMetadataAsync(profile, counter);
 
-                    if (meta == null) return new NotFoundResult();
+                    if (meta == null)
+                    {
+                        return new NotFoundResult();
+                    }
 
                     // Continue with action
                     return await action(profile, meta);

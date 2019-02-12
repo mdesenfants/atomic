@@ -41,21 +41,6 @@ export function count(counter, key) {
         }).then(v => v.json());
     });
 }
-export function getAuthToken(token, provider) {
-    return tslib_1.__awaiter(this, void 0, void 0, function* () {
-        const response = yield fetch(`https://atomiccounter.azurewebsites.net/.auth/login/${provider}`, {
-            body: JSON.stringify({
-                id_token: token
-            }),
-            headers: {
-                "Content-Type": "application/json"
-            },
-            method: "POST",
-        });
-        const ez = yield response.json();
-        return ez.authenticationToken;
-    });
-}
 export function counterNameIsValid(input) {
     return input.length > 3 && input.length < 54 && /[a-z0-9]+/.test(input);
 }
@@ -73,8 +58,8 @@ export class AtomicCounterClient {
             return yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
                 headers: {
                     "Accept": "application/json",
+                    "Authorization": 'Bearer ' + (yield this.token()),
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "POST"
             })
@@ -92,11 +77,13 @@ export class AtomicCounterClient {
             return yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
                 headers: {
                     "Accept": "application/json",
+                    "Authorization": 'Bearer ' + (yield this.token()),
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "GET",
-            }).then(t => t.json());
+            })
+                .then(t => t.json())
+                .catch(null);
         });
     }
     getCounters() {
@@ -104,8 +91,8 @@ export class AtomicCounterClient {
             return yield fetch('https://atomiccounter.azurewebsites.net/api/counters', {
                 headers: {
                     "Accept": "application/json",
+                    "Authorization": 'Bearer ' + (yield this.token()),
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "GET",
             }).then(t => t.json());
@@ -155,8 +142,8 @@ export class AtomicCounterClient {
             yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/reset`, {
                 headers: {
                     "Accept": "application/json",
+                    "Authorization": 'Bearer ' + (yield this.token()),
                     "Content-Type": "application/json",
-                    "X-ZUMO-AUTH": yield this.token()
                 },
                 method: "POST",
             });

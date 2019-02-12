@@ -6,7 +6,6 @@ export interface ICounter {
 }
 export declare function increment(counter: string, key: string): Promise<void>;
 export declare function count(counter: string, key: string): Promise<number>;
-export declare function getAuthToken(token: string, provider: string): Promise<string>;
 export declare function counterNameIsValid(input: string): boolean;
 export declare class AtomicCounterClient {
     private token;

@@ -1,5 +1,5 @@
-﻿using System;
-using Microsoft.WindowsAzure.Storage.Table;
+﻿using Microsoft.WindowsAzure.Storage.Table;
+using System;
 
 namespace AtomicCounter.Models
 {
@@ -23,5 +23,7 @@ namespace AtomicCounter.Models
         }
 
         public Guid ProfileId { get; set; }
+
+        public string Token { get; set; }
     }
 }

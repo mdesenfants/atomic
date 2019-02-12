@@ -7,7 +7,7 @@ namespace AtomicCounter.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public string Email { get; set; }
+        public string Email { get; set; } = String.Empty;
 
         public IList<string> Counters { get; set; } = new List<string>();
     }
