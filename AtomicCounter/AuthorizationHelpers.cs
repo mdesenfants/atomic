@@ -32,7 +32,7 @@ namespace AtomicCounter
             return Base64UrlEncoder.Encode(result);
         }
 
-        public static async Task<AuthInfo> GetAuthInfoAsync(this HttpRequest request)
+        public static async Task<OAuthToken> GetAuthInfoAsync(this HttpRequest request)
         {
             var value = GetAuthToken(request);
 
@@ -43,29 +43,22 @@ namespace AtomicCounter
 
             var first = value.IndexOf(' ') + 1;
             var length = value.Length - first - 1;
-            var token = value.Substring(first, length);
+            var code = value.Substring(first, length);
 
-            if (token.Length == 0)
+            if (code.Length == 0)
             {
                 throw new InvalidOperationException();
             }
 
-            var uri = new Uri($"https://connect.stripe.com/oauth/token?code={token}");
+            var uri = new Uri($"https://connect.stripe.com/oauth/token?code={code}");
 
-            var client = HttpClientFactory.Create();
-            var secret = Environment.GetEnvironmentVariable("StripeSecKey");
-            var content = new StringContent($"client_secret=\"{secret}\"");
-
-            var response = await client.PostAsync(uri, content);
-
-            if (response.IsSuccessStatusCode)
+            var tokenService = new OAuthTokenService();
+            return await tokenService.CreateAsync(new OAuthTokenCreateOptions()
             {
-                return JsonConvert.DeserializeObject<AuthInfo>(await response.Content.ReadAsStringAsync());
-            }
-            else
-            {
-                throw new UnauthorizedAccessException();
-            }
+                ClientSecret = Environment.GetEnvironmentVariable("StripeSecKey"),
+                Code = code,
+                GrantType = "authorization_code",
+            });
         }
 
         private static readonly HttpClient _httpClient = new HttpClient();

@@ -11,7 +11,7 @@ interface IGoogleState {
     tokenCallback: (token: any) => void;
 }
 
-const tokenLocation = 'strip_token';
+const tokenLocation = 'stripe_token';
 
 export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleState> {
     constructor(props: IGoogleProps) {

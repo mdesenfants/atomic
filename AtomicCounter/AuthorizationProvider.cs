@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AtomicCounter
@@ -65,7 +64,7 @@ namespace AtomicCounter
             try
             {
                 var authInfo = await req?.GetAuthInfoAsync();
-                var userName = $"stripe|{authInfo.UserId}";
+                var userName = authInfo.StripeUserId;
 
                 return await action(await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken));
             }
