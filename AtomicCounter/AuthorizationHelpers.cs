@@ -44,7 +44,7 @@ namespace AtomicCounter
             }
 
             var first = value.IndexOf(' ') + 1;
-            var length = value.Length - first - 1;
+            var length = value.Length - first;
             var code = value.Substring(first, length);
 
             if (code.Length == 0)
