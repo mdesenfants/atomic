@@ -64,7 +64,7 @@ namespace AtomicCounter
             try
             {
                 var authInfo = await req?.GetAuthInfoAsync();
-                var userName = authInfo.StripeUserId;
+                var userName = $"stripe|{authInfo.StripeUserId}";
 
                 return await action(await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken));
             }

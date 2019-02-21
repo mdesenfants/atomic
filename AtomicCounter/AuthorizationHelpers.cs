@@ -20,9 +20,11 @@ namespace AtomicCounter
 
     public static class AuthorizationHelpers
     {
+        private const string StripeSecretSetting = "StripeSecKey";
+
         static AuthorizationHelpers()
         {
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable("StripeKey"));
+            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(StripeSecretSetting));
         }
 
         public static string CombineAndHash(string a, string b)
@@ -42,30 +44,26 @@ namespace AtomicCounter
             }
 
             var first = value.IndexOf(' ') + 1;
-            var length = value.Length - first - 1;
+            var length = value.Length - first;
             var code = value.Substring(first, length);
 
             if (code.Length == 0)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("No code provided.");
             }
 
+            if (!code.StartsWith("ac_"))
+            {
+                throw new InvalidOperationException("Invalid account code format.");
+            }
+            
             var tokenService = new OAuthTokenService();
-
-            try
+            return await tokenService.CreateAsync(new OAuthTokenCreateOptions()
             {
-                return await tokenService.CreateAsync(new OAuthTokenCreateOptions()
-                {
-                    ClientSecret = Environment.GetEnvironmentVariable("StripeSecKey"),
-                    Code = code,
-                    GrantType = "authorization_code"
-                });
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+                ClientSecret = Environment.GetEnvironmentVariable(StripeSecretSetting),
+                Code = code,
+                GrantType = "authorization_code"
+            });
         }
 
         private static readonly HttpClient _httpClient = new HttpClient();
