@@ -50,15 +50,22 @@ namespace AtomicCounter
                 throw new InvalidOperationException();
             }
 
-            var uri = new Uri($"https://connect.stripe.com/oauth/token?code={code}");
-
             var tokenService = new OAuthTokenService();
-            return await tokenService.CreateAsync(new OAuthTokenCreateOptions()
+
+            try
             {
-                ClientSecret = Environment.GetEnvironmentVariable("StripeSecKey"),
-                Code = code,
-                GrantType = "authorization_code",
-            });
+                return await tokenService.CreateAsync(new OAuthTokenCreateOptions()
+                {
+                    ClientSecret = Environment.GetEnvironmentVariable("StripeSecKey"),
+                    Code = code,
+                    GrantType = "authorization_code"
+                });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         private static readonly HttpClient _httpClient = new HttpClient();
