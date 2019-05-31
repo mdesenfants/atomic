@@ -44,10 +44,12 @@ class App extends React.Component<{}, IAppState> {
 
     public render() {
         const callback = (value: any) => {
-            const curr = new AtomicCounterClient(() => Promise.resolve(window.localStorage.getItem('stripe_token') || ''));
-            curr.getCounters().then(x => {
-                this.setState({ client: curr, otherCounters: x })
-            });
+            if (!this.state.client) {
+                const curr = new AtomicCounterClient(() => Promise.resolve(window.localStorage.getItem('stripe_token') || ''));
+                curr.getCounters().then(x => {
+                    this.setState({ client: curr, otherCounters: x })
+                });
+            }
         };
 
         const selectCounter = (input: string) => {
