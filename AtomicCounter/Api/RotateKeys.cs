@@ -11,7 +11,7 @@ namespace AtomicCounter.Api
 {
     public static class RotateKeys
     {
-        public static IAuthorizationProvider Authorization = new AuthorizationProvider();
+        public static IAuthorizationProvider Authorization { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(RotateKeys))]
         public static async Task<IActionResult> Run(
@@ -24,9 +24,9 @@ namespace AtomicCounter.Api
 
             return await Authorization.AuthorizeUserAndExecute(req, counter, async (user, meta) =>
             {
-                var result = await AppStorage.RotateKeysAsync(meta, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
+                var result = await AppStorage.RotateKeysAsync(meta, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true)).ConfigureAwait(false);
                 return new OkObjectResult(result);
-            });
+            }).ConfigureAwait(false);
         }
     }
 }

@@ -13,7 +13,7 @@ namespace AtomicCounter.Api
 {
     public static class Count
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         private enum Mode : int
         {
@@ -75,23 +75,23 @@ namespace AtomicCounter.Api
 
                 if (mode == ((int)Mode.Date | (int)Mode.Client))
                 {
-                    result = await storage.CountAsync(client, min, max);
+                    result = await storage.CountAsync(client, min, max).ConfigureAwait(false);
                 }
                 else if (mode == (int)Mode.Date)
                 {
-                    result = await storage.CountAsync(min, max);
+                    result = await storage.CountAsync(min, max).ConfigureAwait(false);
                 }
                 else if (mode == (int)Mode.Client)
                 {
-                    result = await storage.CountAsync(client);
+                    result = await storage.CountAsync(client).ConfigureAwait(false);
                 }
                 else
                 {
-                    result = await storage.CountAsync();
+                    result = await storage.CountAsync().ConfigureAwait(false);
                 }
 
                 return new OkObjectResult(result);
-            });
+            }).ConfigureAwait(false);
         }
     }
 }

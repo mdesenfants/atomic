@@ -10,7 +10,7 @@ namespace AtomicCounter.Api
 {
     public static class ResetCounter
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(ResetCounter))]
         public static async Task<IActionResult> Run(
@@ -26,9 +26,9 @@ namespace AtomicCounter.Api
                 async (profile, meta) =>
                 {
                     // Send reset event
-                    await AppStorage.SendDeleteEventAsync(counter);
+                    await AppStorage.SendDeleteEventAsync(counter).ConfigureAwait(false);
                     return new AcceptedResult();
-                });
+                }).ConfigureAwait(false);
         }
     }
 }

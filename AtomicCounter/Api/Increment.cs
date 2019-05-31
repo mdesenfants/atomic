@@ -11,7 +11,7 @@ namespace AtomicCounter.Api
 {
     public static class Increment
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(Increment))]
         public static async Task<IActionResult> Run(
@@ -32,15 +32,15 @@ namespace AtomicCounter.Api
                     var client = req.Query["client"].FirstOrDefault() ?? string.Empty;
                     if (!string.IsNullOrWhiteSpace(client))
                     {
-                        await cs.SendIncrementEventAsync(count, client);
+                        await cs.SendIncrementEventAsync(count, client).ConfigureAwait(false);
                     }
                     else
                     {
-                        await cs.SendIncrementEventAsync(count);
+                        await cs.SendIncrementEventAsync(count).ConfigureAwait(false);
                     }
 
                     return new AcceptedResult();
-                });
+                }).ConfigureAwait(false);
         }
 
         private static long GetCount(HttpRequest req)

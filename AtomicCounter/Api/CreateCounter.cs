@@ -12,7 +12,7 @@ namespace AtomicCounter.Api
 {
     public static class CreateCounter
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(CreateCounter))]
         public static async Task<IActionResult> Run(
@@ -26,7 +26,7 @@ namespace AtomicCounter.Api
                 req,
                 async user =>
                 {
-                    var existing = await AppStorage.GetOrCreateCounterAsync(user, counter, log);
+                    var existing = await AppStorage.GetOrCreateCounterAsync(user, counter, log).ConfigureAwait(false);
 
                     if (existing == null) return new ConflictResult();
 
@@ -38,7 +38,7 @@ namespace AtomicCounter.Api
                         WriteKeys = existing.WriteKeys
                                 .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
                     });
-                });
+                }).ConfigureAwait(false);
         }
     }
 }

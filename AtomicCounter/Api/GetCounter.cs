@@ -12,7 +12,7 @@ namespace AtomicCounter.Api
 {
     public static class GetCounter
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(GetCounter))]
         public static async Task<IActionResult> Run(
@@ -22,7 +22,7 @@ namespace AtomicCounter.Api
         {
             log.LogInformation("Getting info for counter {0}", counter);
 
-            return await AuthProvider.AuthorizeUserAndExecute(req, counter, GetViewModel);
+            return await AuthProvider.AuthorizeUserAndExecute(req, counter, GetViewModel).ConfigureAwait(false);
         }
 
         private static async Task<IActionResult> GetViewModel(UserProfile profile, Counter existing)
@@ -35,7 +35,7 @@ namespace AtomicCounter.Api
                 WriteKeys = existing.WriteKeys
                     .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
                 PriceChanges = existing.PriceChanges
-            }));
+            })).ConfigureAwait(false);
         }
     }
 }

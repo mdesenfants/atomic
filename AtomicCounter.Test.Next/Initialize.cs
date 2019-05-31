@@ -6,22 +6,31 @@ using System.Diagnostics;
 namespace AtomicCounter.Test
 {
     [TestClass]
-    public class Initialize
+    public static class Initialize
     {
         public const string Counter = "testcounter";
 
-        public static CloudStorageAccount Storage;
+        public static CloudStorageAccount Storage { get; set; }
 
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext context)
         {
+            Debug.Assert(context != null);
             const string store = @"C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe";
 
-            var start = Process.Start(store, "start");
-            start.WaitForExit();
+            try
+            {
+                var start = Process.Start(store, "start");
+                start.WaitForExit();
 
-            var clear = Process.Start(store, "clear all");
-            clear.WaitForExit();
+                var clear = Process.Start(store, "clear all");
+                clear.WaitForExit();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
 
             Environment.SetEnvironmentVariable("AzureWebJobsStorage", "UseDevelopmentStorage=true;");
             Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));

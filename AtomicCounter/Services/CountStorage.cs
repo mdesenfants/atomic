@@ -35,7 +35,7 @@ namespace AtomicCounter.Services
                 Client = client
             }.ToJson());
 
-            await queue.AddMessageAsync(message);
+            await queue.AddMessageAsync(message).ConfigureAwait(false);
         }
 
         public static string Sanitize(string input)
@@ -77,58 +77,50 @@ namespace AtomicCounter.Services
                 Client = client
             });
 
-            await table.ExecuteAsync(insert);
+            await table.ExecuteAsync(insert).ConfigureAwait(false);
         }
 
         public async Task<long> CountAsync(Func<CountEntity, bool> conditions = null)
         {
-            try
+            var table = GetCounterTable();
+
+            if (table == null)
             {
-                var table = GetCounterTable();
-
-                if (table == null)
-                {
-                    return 0;
-                }
-
-                var query = new TableQuery<CountEntity>()
-                    .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
-
-                // Print the fields for each customer.
-                long sum = 0;
-                TableContinuationToken token = null;
-                do
-                {
-                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
-                    token = resultSegment.ContinuationToken;
-
-                    if (conditions != null)
-                    {
-                        sum += resultSegment.Results.Where(conditions).Sum(x => x.Count);
-                    }
-                    else
-                    {
-                        sum += resultSegment.Results.Sum(x => x.Count);
-                    }
-                } while (token != null);
-
-                return sum;
-            }
-            catch
-            {
-                logger.LogWarning($"There was a problem counting {Counter}. Defaulting to 0.");
                 return 0;
             }
+
+            var query = new TableQuery<CountEntity>()
+                .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
+
+            // Print the fields for each customer.
+            long sum = 0;
+            TableContinuationToken token = null;
+            do
+            {
+                var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token).ConfigureAwait(false);
+                token = resultSegment.ContinuationToken;
+
+                if (conditions != null)
+                {
+                    sum += resultSegment.Results.Where(conditions).Sum(x => x.Count);
+                }
+                else
+                {
+                    sum += resultSegment.Results.Sum(x => x.Count);
+                }
+            } while (token != null);
+
+            return sum;
         }
 
         public async Task<long> CountAsync(string client)
         {
-            return await CountAsync(x => client.Equals(x.Client, StringComparison.OrdinalIgnoreCase));
+            return await CountAsync(x => client.Equals(x.Client, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
         }
 
         public async Task<long> CountAsync(DateTimeOffset min, DateTimeOffset max)
         {
-            return await CountAsync(x => DateInRange(x.Timestamp, min, max));
+            return await CountAsync(x => DateInRange(x.Timestamp, min, max)).ConfigureAwait(false);
         }
 
         private static bool DateInRange(DateTimeOffset? timestamp, DateTimeOffset min, DateTimeOffset max)
@@ -142,7 +134,7 @@ namespace AtomicCounter.Services
         {
             return await CountAsync(x =>
                 client.Equals(x.Client, StringComparison.OrdinalIgnoreCase) &&
-                DateInRange(x.Timestamp, min, max));
+                DateInRange(x.Timestamp, min, max)).ConfigureAwait(false);
         }
 
         public async Task<Dictionary<string, IEnumerable<ChargeGroup>>> GetInvoiceDataAsync(DateTimeOffset min, DateTimeOffset max)
@@ -156,7 +148,7 @@ namespace AtomicCounter.Services
                     return new Dictionary<string, IEnumerable<ChargeGroup>>();
                 }
 
-                var meta = await AppStorage.GetCounterMetadataAsync(Counter);
+                var meta = await AppStorage.GetCounterMetadataAsync(Counter).ConfigureAwait(false);
 
                 // Create a sorted lookup so we classify records to their bucket quickly
                 var lookup = new SortedSet<DateTimeOffset>(
@@ -178,7 +170,7 @@ namespace AtomicCounter.Services
                 TableContinuationToken token = null;
                 do
                 {
-                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
+                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token).ConfigureAwait(false);
                     var filtered = resultSegment.Where(r => DateInRange(r.Timestamp, min, max) && !string.IsNullOrEmpty(r.Client));
                     foreach (var result in filtered)
                     {

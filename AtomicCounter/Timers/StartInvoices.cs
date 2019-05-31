@@ -15,18 +15,19 @@ namespace AtomicCounter.Timers
         public static async Task Run([TimerTrigger("0 5 */1 * * *")]TimerInfo timer, ILogger log)
         {
             log.LogInformation($"Generating invoices starting at: {DateTime.Now}");
+            log.LogInformation(timer.ToString());
 
             var container = AppStorage.GetCounterMetadataContainer();
 
             BlobContinuationToken token = null;
             do
             {
-                var segment = await container.ListBlobsSegmentedAsync(token);
+                var segment = await container.ListBlobsSegmentedAsync(token).ConfigureAwait(false);
                 token = segment.ContinuationToken;
 
                 foreach (var record in segment.Results.OfType<CloudBlockBlob>())
                 {
-                    var counter = await AppStorage.GetCounterMetadataAsync(record.Name);
+                    var counter = await AppStorage.GetCounterMetadataAsync(record.Name).ConfigureAwait(false);
 
                     if (counter.InvoiceFrequency == InvoiceFrequency.Never ||
                         counter.NextInvoiceRun > DateTimeOffset.Now ||
@@ -35,7 +36,7 @@ namespace AtomicCounter.Timers
                         return;
                     }
 
-                    await AppStorage.SendInvoiceRequestEventAsync(counter.CounterName, counter.LastInvoiceRun, counter.NextInvoiceRun);
+                    await AppStorage.SendInvoiceRequestEventAsync(counter.CounterName, counter.LastInvoiceRun, counter.NextInvoiceRun).ConfigureAwait(false);
                 }
             } while (token != null);
         }

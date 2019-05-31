@@ -17,14 +17,14 @@ namespace AtomicCounter.EventHandlers
             var counter = new CountStorage(increment.Counter, log);
             try
             {
-                await counter.IncrementAsync(increment.EventId, increment.Client, increment.Count);
+                await counter.IncrementAsync(increment.EventId, increment.Client, increment.Count).ConfigureAwait(false);
                 log.LogInformation($"Complete: {increment}");
             }
             catch
             {
-                if (!await counter.GetCounterTable().ExistsAsync())
+                if (!await counter.GetCounterTable().ExistsAsync().ConfigureAwait(false))
                 {
-                    await AppStorage.SendRecreateEventAsync(increment.Counter);
+                    await AppStorage.SendRecreateEventAsync(increment.Counter).ConfigureAwait(false);
                 }
 
                 throw;

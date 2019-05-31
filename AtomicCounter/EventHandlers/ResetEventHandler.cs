@@ -13,8 +13,8 @@ namespace AtomicCounter.EventHandlers
             ILogger log)
         {
             log.LogInformation($"Resetting: {counter}");
-            await AppStorage.DeleteCounterAsync(counter, log);
-            await AppStorage.SendRecreateEventAsync(counter);
+            await AppStorage.DeleteCounterAsync(counter, log).ConfigureAwait(false);
+            await AppStorage.SendRecreateEventAsync(counter).ConfigureAwait(false);
         }
     }
 }

@@ -18,19 +18,19 @@ namespace AtomicCounter.EventHandlers
             log.LogInformation($"Handling invoice request: {request.Counter}");
 
             var client = new CountStorage(request.Counter, log);
-            var data = await client.GetInvoiceDataAsync(request.Min, request.Max);
+            var data = await client.GetInvoiceDataAsync(request.Min, request.Max).ConfigureAwait(false);
 
             foreach (var record in data)
             {
-                await AppStorage.SaveInvoiceAsync(request.Counter, record.Key, request.Min, request.Max, record.Value);
+                await AppStorage.SaveInvoiceAsync(request.Counter, record.Key, request.Min, request.Max, record.Value).ConfigureAwait(false);
             }
 
-            var meta = await AppStorage.GetCounterMetadataAsync(request.Counter);
+            var meta = await AppStorage.GetCounterMetadataAsync(request.Counter).ConfigureAwait(false);
 
             meta.LastInvoiceRun = request.Max;
             meta.NextInvoiceRun = GetNextDate(request.Max, meta.InvoiceFrequency);
 
-            await AppStorage.SaveCounterMetadataAsync(meta);
+            await AppStorage.SaveCounterMetadataAsync(meta).ConfigureAwait(false);
         }
 
         public static DateTimeOffset GetNextDate(DateTimeOffset current, InvoiceFrequency invoiceFrequency)

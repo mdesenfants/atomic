@@ -7,6 +7,7 @@ using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
-    public class AppStorage
+    public static class AppStorage
     {
         public const string CountQueueName = "increment-items";
         public const string ResetEventsQueueName = "reset-events";
@@ -29,14 +30,14 @@ namespace AtomicCounter.Services
         {
             var counterClient = new CountStorage(counter, logger);
             var table = counterClient.GetCounterTable();
-            await table.DeleteIfExistsAsync();
+            await table.DeleteIfExistsAsync().ConfigureAwait(false);
         }
 
         public static async Task RecreateCounterAsync(string counter, ILogger logger)
         {
             var counterClient = new CountStorage(counter, logger);
             var table = counterClient.GetCounterTable();
-            await table.CreateIfNotExistsAsync();
+            await table.CreateIfNotExistsAsync().ConfigureAwait(false);
         }
 
         public static async Task SendDeleteEventAsync(string counter)
@@ -44,7 +45,7 @@ namespace AtomicCounter.Services
             var queueClient = Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(ResetEventsQueueName);
             var message = new CloudQueueMessage(counter);
-            await queue.AddMessageAsync(message);
+            await queue.AddMessageAsync(message).ConfigureAwait(false);
         }
 
         public static async Task SendRecreateEventAsync(string counter)
@@ -52,7 +53,7 @@ namespace AtomicCounter.Services
             var queueClient = Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(RecreateEventsQueueName);
             var message = new CloudQueueMessage(counter);
-            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
+            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null).ConfigureAwait(false);
         }
 
         public static async Task SendPriceChangeEventAsync(IPriceChange change)
@@ -68,7 +69,7 @@ namespace AtomicCounter.Services
             var queueClient = Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
             var message = new CloudQueueMessage(change.ToJson());
-            await queue.AddMessageAsync(message);
+            await queue.AddMessageAsync(message).ConfigureAwait(false);
         }
 
         public static async Task SendInvoiceRequestEventAsync(string counter, DateTimeOffset min, DateTimeOffset max)
@@ -84,17 +85,17 @@ namespace AtomicCounter.Services
             };
 
             var message = new CloudQueueMessage(invoiceEvent.ToJson());
-            await queue.AddMessageAsync(message);
+            await queue.AddMessageAsync(message).ConfigureAwait(false);
         }
 
         public static async Task HandlePriceChangeEventAsync(PriceChangeEvent change)
         {
-            var meta = await GetCounterMetadataAsync(change.Counter);
+            var meta = await GetCounterMetadataAsync(change.Counter).ConfigureAwait(false);
             meta.PriceChanges.Add(change);
-            await SaveCounterMetadataAsync(meta);
+            await SaveCounterMetadataAsync(meta).ConfigureAwait(false);
         }
 
-        public static async Task<int> RetryPoisonIncrementEventsAsync(CancellationToken token, ILogger log)
+        public static async Task<int> RetryPoisonIncrementEventsAsync(ILogger log, CancellationToken token)
         {
             var queueClient = Storage.CreateCloudQueueClient();
             var poison = queueClient.GetQueueReference(CountQueueName + "-poison");
@@ -103,7 +104,7 @@ namespace AtomicCounter.Services
             log.LogInformation($"Transferring {poison.Name} to {queue.Name}.");
 
             var retval = 0;
-            if (await poison.ExistsAsync())
+            if (await poison.ExistsAsync().ConfigureAwait(false))
             {
                 log.LogInformation("Found poison queue.");
                 var countSetting = Environment.GetEnvironmentVariable("ResetCount");
@@ -119,12 +120,12 @@ namespace AtomicCounter.Services
                     return true;
                 }
 
-                var countSettingValue = !string.IsNullOrWhiteSpace(countSetting) ? int.Parse(countSetting) : 32;
+                var countSettingValue = !string.IsNullOrWhiteSpace(countSetting) ? int.Parse(countSetting, CultureInfo.InvariantCulture) : 32;
 
                 log.LogInformation($"Grabbing maximum {countSettingValue} poinson items per batch.");
                 while (canContinue())
                 {
-                    var messages = await poison.GetMessagesAsync(countSettingValue);
+                    var messages = await poison.GetMessagesAsync(countSettingValue).ConfigureAwait(false);
                     if (messages.Count() == 0)
                     {
                         break;
@@ -138,8 +139,8 @@ namespace AtomicCounter.Services
                         }
 
                         retval++;
-                        await poison.DeleteMessageAsync(message);
-                        await queue.AddMessageAsync(message);
+                        await poison.DeleteMessageAsync(message).ConfigureAwait(false);
+                        await queue.AddMessageAsync(message).ConfigureAwait(false);
                     }
                 }
             }
@@ -165,17 +166,21 @@ namespace AtomicCounter.Services
             switch (mode)
             {
                 case KeyMode.Read:
-                    counter.ReadKeys = new List<string> {
+                    var readKeys = new List<string> {
                         RandomString(),
                         counter.ReadKeys.First()
                     };
+                    counter.ReadKeys.Clear();
+                    readKeys.ForEach(x => counter.ReadKeys.Add(x));
                     keys = counter.ReadKeys.ToArray();
                     break;
                 case KeyMode.Write:
-                    counter.WriteKeys = new List<string> {
+                    var writeKeys = new List<string> {
                         RandomString(),
                         counter.WriteKeys.First()
                     };
+                    counter.WriteKeys.Clear();
+                    writeKeys.ForEach(x => counter.WriteKeys.Add(x));
                     keys = counter.WriteKeys.ToArray();
                     break;
                 case KeyMode.Duplex:
@@ -187,7 +192,7 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CounterName);
 
-            await block.UploadTextAsync(counter.ToJson());
+            await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
 
             return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CounterName, x)).ToArray();
         }
@@ -204,7 +209,7 @@ namespace AtomicCounter.Services
             };
 
             var op = TableOperation.Retrieve<ProfileMappingEntity>(refEntity.PartitionKey, refEntity.RowKey);
-            var queryResult = await table.ExecuteAsync(op);
+            var queryResult = await table.ExecuteAsync(op).ConfigureAwait(false);
             var resEntity = (ProfileMappingEntity)queryResult?.Result;
 
             if (resEntity == null)
@@ -212,10 +217,10 @@ namespace AtomicCounter.Services
                 // Create profile
                 var profile = new UserProfile();
 
-                await SaveUserProfileAsync(profile);
+                await SaveUserProfileAsync(profile).ConfigureAwait(false);
                 refEntity.ProfileId = profile.Id;
 
-                await table.ExecuteAsync(TableOperation.Insert(refEntity));
+                await table.ExecuteAsync(TableOperation.Insert(refEntity)).ConfigureAwait(false);
 
                 return profile;
             }
@@ -223,7 +228,7 @@ namespace AtomicCounter.Services
             {
                 var blob = GetProfileContainer();
                 var block = blob.GetBlockBlobReference(resEntity.ProfileId.ToString());
-                return (await block.DownloadTextAsync()).FromJson<UserProfile>();
+                return (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<UserProfile>();
             }
         }
 
@@ -231,7 +236,7 @@ namespace AtomicCounter.Services
         {
             var blob = GetProfileContainer();
             var block = blob.GetBlockBlobReference(profile.Id.ToString());
-            await block.UploadTextAsync(profile.ToJson());
+            await block.UploadTextAsync(profile.ToJson()).ConfigureAwait(false);
         }
 
         public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
@@ -245,9 +250,9 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter);
 
-            if (await block.ExistsAsync())
+            if (await block.ExistsAsync().ConfigureAwait(false))
             {
-                var existing = (await block.DownloadTextAsync()).FromJson<Counter>();
+                var existing = (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<Counter>();
                 return existing.Profiles.Contains(profile.Id) ? existing : null;
             }
             else
@@ -274,10 +279,10 @@ namespace AtomicCounter.Services
                         table.CreateIfNotExistsAsync(),
                     };
 
-                    await Task.Run(() => Task.WaitAll(tasks));
+                    Task.WaitAll(tasks);
 
                     profile.Counters.Add(newCounter.CounterName);
-                    await SaveUserProfileAsync(profile);
+                    await SaveUserProfileAsync(profile).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -287,7 +292,7 @@ namespace AtomicCounter.Services
                         table.DeleteIfExistsAsync(),
                     };
 
-                    await Task.Run(() => Task.WaitAll(tasks));
+                    await Task.Run(() => Task.WaitAll(tasks)).ConfigureAwait(false);
 
                     throw;
                 }
@@ -300,9 +305,9 @@ namespace AtomicCounter.Services
         {
             var blobClient = Storage.CreateCloudBlobClient();
             var container = blobClient.GetContainerReference($"{counter}/{client}");
-            var ranges = Uri.EscapeDataString(min.ToString("o")) + "-" + Uri.EscapeDataString(max.ToString("o")) + ".json";
+            var ranges = Uri.EscapeDataString(min.ToString("o", CultureInfo.InvariantCulture)) + "-" + Uri.EscapeDataString(max.ToString("o", CultureInfo.InvariantCulture)) + ".json";
             var blob = container.GetBlockBlobReference(ranges);
-            await blob.UploadTextAsync(invoice.ToJson());
+            await blob.UploadTextAsync(invoice.ToJson()).ConfigureAwait(false);
         }
 
         private static string RandomString()
@@ -326,7 +331,7 @@ namespace AtomicCounter.Services
 
         public static async Task<Counter> GetCounterMetadataAsync(UserProfile profile, string counter)
         {
-            var existing = await GetCounterMetadataAsync(counter);
+            var existing = await GetCounterMetadataAsync(counter).ConfigureAwait(false);
 
             if (existing == null)
             {
@@ -345,9 +350,9 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter);
 
-            if (await block.ExistsAsync())
+            if (await block.ExistsAsync().ConfigureAwait(false))
             {
-                return (await block.DownloadTextAsync()).FromJson<Counter>();
+                return (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<Counter>();
             }
 
             return null;
@@ -357,7 +362,7 @@ namespace AtomicCounter.Services
         {
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CounterName);
-            await block.UploadTextAsync(counter.ToJson());
+            await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
         }
 
         private static CloudBlobContainer GetProfileContainer()
@@ -370,11 +375,6 @@ namespace AtomicCounter.Services
         {
             var blobClient = Storage.CreateCloudBlobClient();
             return blobClient.GetContainerReference(CountersKey);
-        }
-
-        static AppStorage()
-        {
-            Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
         }
 
         public static void CreateAppStorage()
@@ -407,6 +407,6 @@ namespace AtomicCounter.Services
             Task.WaitAll(tasks.ToArray());
         }
 
-        public static readonly CloudStorageAccount Storage;
+        public static readonly CloudStorageAccount Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
     }
 }

@@ -13,7 +13,7 @@ namespace AtomicCounter.EventHandlers
             ILogger log)
         {
             log.LogInformation($"Recreating: {counter}");
-            await AppStorage.RecreateCounterAsync(counter, log);
+            await AppStorage.RecreateCounterAsync(counter, log).ConfigureAwait(false);
         }
     }
 }

@@ -52,7 +52,7 @@ namespace AtomicCounter
                 throw new InvalidOperationException("No code provided.");
             }
 
-            if (!code.StartsWith("ac_"))
+            if (!code.StartsWith("ac_", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("Invalid account code format.");
             }
@@ -63,10 +63,8 @@ namespace AtomicCounter
                 ClientSecret = Environment.GetEnvironmentVariable(StripeSecretSetting),
                 Code = code,
                 GrantType = "authorization_code"
-            });
+            }).ConfigureAwait(false);
         }
-
-        private static readonly HttpClient _httpClient = new HttpClient();
 
         private static string GetAuthToken(this HttpRequest req)
         {

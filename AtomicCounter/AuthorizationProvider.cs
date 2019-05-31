@@ -22,7 +22,7 @@ namespace AtomicCounter
                     return new UnauthorizedResult();
                 }
 
-                var existing = await AppStorage.GetCounterMetadataAsync(counter);
+                var existing = await AppStorage.GetCounterMetadataAsync(counter).ConfigureAwait(false);
 
                 if (existing == null)
                 {
@@ -47,26 +47,28 @@ namespace AtomicCounter
                     return new UnauthorizedResult();
                 }
 
-                return await action();
+                return await action().ConfigureAwait(false);
             }
             catch (InvalidOperationException)
             {
                 return new BadRequestResult();
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch
             {
                 return new UnauthorizedResult();
             }
+#pragma warning restore CA1031 // Do not catch general exception types
         }
 
         public async Task<IActionResult> AuthorizeUserAndExecute(HttpRequest req, Func<UserProfile, Task<IActionResult>> action)
         {
             try
             {
-                var authInfo = await req?.GetAuthInfoAsync();
+                var authInfo = await (req?.GetAuthInfoAsync()).ConfigureAwait(false);
                 var userName = $"stripe|{authInfo.StripeUserId}";
 
-                return await action(await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken));
+                return await action(await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken).ConfigureAwait(false)).ConfigureAwait(false);
             }
             catch (InvalidOperationException)
             {
@@ -90,7 +92,7 @@ namespace AtomicCounter
                 return await AuthorizeUserAndExecute(req, async profile =>
                 {
                     // Throw unauthorized exception here when necessary
-                    var meta = await AppStorage.GetCounterMetadataAsync(profile, counter);
+                    var meta = await AppStorage.GetCounterMetadataAsync(profile, counter).ConfigureAwait(false);
 
                     if (meta == null)
                     {
@@ -98,8 +100,8 @@ namespace AtomicCounter
                     }
 
                     // Continue with action
-                    return await action(profile, meta);
-                });
+                    return await action(profile, meta).ConfigureAwait(false);
+                }).ConfigureAwait(false);
             }
             catch (InvalidOperationException)
             {

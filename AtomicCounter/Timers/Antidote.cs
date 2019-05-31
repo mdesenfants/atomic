@@ -13,15 +13,15 @@ namespace AtomicCounter.Timers
 
         [FunctionName("Antidote")]
         public static async Task Run(
-            [TimerTrigger(everyFiveMinutes)]TimerInfo myTimer,
+            [TimerTrigger(everyFiveMinutes)]TimerInfo timer,
             ILogger log,
             CancellationToken token)
         {
-            log.LogInformation($"Retrying poison items at {DateTime.Now}.");
+            log.LogInformation($"Retrying poison items at {DateTime.Now}. Timer is {(timer.IsPastDue ? "past due" : "on time")}.");
 
             AppStorage.CreateAppStorage();
 
-            var total = await AppStorage.RetryPoisonIncrementEventsAsync(token, log);
+            var total = await AppStorage.RetryPoisonIncrementEventsAsync(log, token).ConfigureAwait(false);
             
             log.LogInformation($"Resubmitted {total} increment operations from poison queue.");
         }

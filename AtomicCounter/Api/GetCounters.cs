@@ -9,7 +9,7 @@ namespace AtomicCounter.Api
 {
     public static class GetCounters
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(GetCounters))]
         public static async Task<IActionResult> Run(
@@ -20,8 +20,8 @@ namespace AtomicCounter.Api
 
             return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
             {
-                return await Task.FromResult(new OkObjectResult(profile.Counters));
-            });
+                return await Task.FromResult(new OkObjectResult(profile.Counters)).ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
     }
 }

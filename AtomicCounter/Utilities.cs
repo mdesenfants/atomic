@@ -4,11 +4,11 @@ using System.Text;
 
 namespace AtomicCounter
 {
-    public static class Utilities
+    public static class AtomicUtilities
     {
         public static string ToJson<T>(this T input)
         {
-            return input.ToJson();
+            return JsonConvert.SerializeObject(input);
         }
 
         public static T FromJson<T>(this string input)

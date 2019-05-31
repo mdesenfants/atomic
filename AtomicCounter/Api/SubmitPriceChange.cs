@@ -14,7 +14,7 @@ namespace AtomicCounter.Api
 {
     public static class SubmitPriceChange
     {
-        public static IAuthorizationProvider AuthProvider = new AuthorizationProvider();
+        public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
         [FunctionName(nameof(SubmitPriceChange))]
         public static async Task<IActionResult> Run(
@@ -31,7 +31,7 @@ namespace AtomicCounter.Api
                 {
                     using (var str = new StreamReader(req.Body))
                     {
-                        var body = await str.ReadToEndAsync();
+                        var body = await str.ReadToEndAsync().ConfigureAwait(false);
                         var change = body.FromJson<PriceChangeEvent>();
 
                         var vc = new ValidationContext(change);
@@ -41,11 +41,11 @@ namespace AtomicCounter.Api
                             return new BadRequestObjectResult(errors);
                         }
 
-                        await AppStorage.SendPriceChangeEventAsync(change);
+                        await AppStorage.SendPriceChangeEventAsync(change).ConfigureAwait(false);
 
                         return new AcceptedResult();
                     }
-                });
+                }).ConfigureAwait(false);
         }
     }
 }
