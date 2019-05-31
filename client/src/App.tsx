@@ -8,7 +8,7 @@ import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 
-import GoogleLogin from './GoogleLogin';
+import StripeLogin from './StripeLogin';
 
 interface IAppState {
     client: AtomicCounterClient | null;
@@ -44,7 +44,7 @@ class App extends React.Component<{}, IAppState> {
 
     public render() {
         const callback = (value: any) => {
-            const curr = new AtomicCounterClient(() => Promise.resolve(window.localStorage.getItem('strip_token') || ''));
+            const curr = new AtomicCounterClient(() => Promise.resolve(window.localStorage.getItem('stripe_token') || ''));
             curr.getCounters().then(x => {
                 this.setState({ client: curr, otherCounters: x })
             });
@@ -89,7 +89,7 @@ class App extends React.Component<{}, IAppState> {
                                 </Typography>
                             </Grid>
                             <Grid item={true}>
-                                <GoogleLogin tokenCallback={callback} />
+                                <StripeLogin tokenCallback={callback} />
                             </Grid>
                         </Grid>
                     </Toolbar>

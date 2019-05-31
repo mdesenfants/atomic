@@ -2,6 +2,7 @@
 using AtomicCounter.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -68,7 +69,9 @@ namespace AtomicCounter
                 var authInfo = await (req?.GetAuthInfoAsync()).ConfigureAwait(false);
                 var userName = $"stripe|{authInfo.StripeUserId}";
 
-                return await action(await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken).ConfigureAwait(false)).ConfigureAwait(false);
+
+                UserProfile userProfile = await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken).ConfigureAwait(false);
+                return await action(userProfile).ConfigureAwait(false);
             }
             catch (InvalidOperationException)
             {

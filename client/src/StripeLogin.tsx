@@ -1,20 +1,20 @@
 import * as React from 'react';
-import './GoogleLogin.css';
+import './StripeLogin.css';
 
 import { Button } from '@material-ui/core';
 
-interface IGoogleProps {
+interface IStripeProps {
     tokenCallback: (token: any) => void;
 }
 
-interface IGoogleState {
+interface IStripeState {
     tokenCallback: (token: any) => void;
 }
 
 const tokenLocation = 'stripe_token';
 
-export default class GoogleLogin extends React.Component<IGoogleProps, IGoogleState> {
-    constructor(props: IGoogleProps) {
+export default class StripeLogin extends React.Component<IStripeProps, IStripeState> {
+    constructor(props: IStripeProps) {
         super(props);
 
         this.state = {

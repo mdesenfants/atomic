@@ -13,7 +13,7 @@ namespace AtomicCounter
 
         public static T FromJson<T>(this string input)
         {
-            if (string.IsNullOrWhiteSpace(input)) return default(T);
+            if (string.IsNullOrWhiteSpace(input)) return default;
 
             return JsonConvert.DeserializeObject<T>(input);
         }
@@ -25,7 +25,7 @@ namespace AtomicCounter
 
         public static T FromBase64String<T>(this string input)
         {
-            if (string.IsNullOrWhiteSpace(input)) return default(T);
+            if (string.IsNullOrWhiteSpace(input)) return default;
 
             return Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(input)).FromJson<T>();
         }

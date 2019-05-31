@@ -1,10 +1,13 @@
 ﻿using AtomicCounter.Models;
 using AtomicCounter.Models.Events;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -24,6 +27,7 @@ namespace AtomicCounter.Services
         public const string PriceChangeEventsQueueName = "price-change-events";
         public const string InvoicRequestEventsQueueName = "invoice-request-events";
         public const string ProfilesKey = "profiles";
+        public const string StripesKey = "stripes";
         public const string CountersKey = "counters";
 
         public static async Task DeleteCounterAsync(string counter, ILogger logger)
@@ -239,6 +243,30 @@ namespace AtomicCounter.Services
             await block.UploadTextAsync(profile.ToJson()).ConfigureAwait(false);
         }
 
+        public static async Task<OAuthToken> GetOrCreateStripeInfo(string code, Func<Task<OAuthToken>> tokenFactory)
+        {
+            var blob = GetStripeContainer();
+
+            using (SHA256 hasher = SHA256.Create())
+            {
+                var hashed = Base64UrlEncoder.Encode(hasher.ComputeHash(Encoding.UTF8.GetBytes(code)));
+                var block = blob.GetBlockBlobReference(hashed);
+
+                if (await block.ExistsAsync().ConfigureAwait(false))
+                {
+                    var data = await block.DownloadTextAsync().ConfigureAwait(false);
+                    return JsonConvert.DeserializeObject<OAuthToken>(data);
+                }
+                else
+                {
+                    var data = await tokenFactory().ConfigureAwait(false);
+                    var content = JsonConvert.SerializeObject(data);
+                    await block.UploadTextAsync(content).ConfigureAwait(false);
+                    return data;
+                }
+            }
+        }
+
         public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
         {
             if (!CounterNameIsValid(counter))
@@ -366,6 +394,12 @@ namespace AtomicCounter.Services
         }
 
         private static CloudBlobContainer GetProfileContainer()
+        {
+            var blobClient = Storage.CreateCloudBlobClient();
+            return blobClient.GetContainerReference(ProfilesKey);
+        }
+
+        private static CloudBlobContainer GetStripeContainer()
         {
             var blobClient = Storage.CreateCloudBlobClient();
             return blobClient.GetContainerReference(ProfilesKey);

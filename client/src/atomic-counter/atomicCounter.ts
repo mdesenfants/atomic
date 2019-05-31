@@ -75,8 +75,8 @@ export class AtomicCounterClient {
             },
             method: "POST"
         })
-            .then(t => t.json() as unknown as ICounter)
-            .catch(() => null);
+        .then(t => t.json() as unknown as ICounter)
+        .catch(() => null);
     }
 
     public async getCounter(counter: string) {
@@ -94,8 +94,8 @@ export class AtomicCounterClient {
             },
             method: "GET",
         })
-            .then(t => t.json() as unknown as ICounter)
-            .catch(null);
+        .then(t => t.json() as unknown as ICounter)
+        .catch(null);
     }
 
     public async getCounters() {

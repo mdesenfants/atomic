@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AtomicCounter.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Stripe;
@@ -56,13 +57,15 @@ namespace AtomicCounter
             {
                 throw new InvalidOperationException("Invalid account code format.");
             }
-            
-            var tokenService = new OAuthTokenService();
-            return await tokenService.CreateAsync(new OAuthTokenCreateOptions()
+
+            return await AppStorage.GetOrCreateStripeInfo(code, async () =>
             {
-                ClientSecret = Environment.GetEnvironmentVariable(StripeSecretSetting),
-                Code = code,
-                GrantType = "authorization_code"
+                return await (new OAuthTokenService()).CreateAsync(new OAuthTokenCreateOptions()
+                {
+                    ClientSecret = Environment.GetEnvironmentVariable(StripeSecretSetting),
+                    Code = code,
+                    GrantType = "authorization_code"
+                }).ConfigureAwait(false);
             }).ConfigureAwait(false);
         }
 
