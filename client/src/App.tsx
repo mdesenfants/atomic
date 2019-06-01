@@ -116,7 +116,7 @@ class App extends React.Component<{}, IAppState> {
                         </button>
                             {
                                 this.state.otherCounters
-                                    .filter(oc => oc.startsWith(this.state.counterName) && oc !== this.state.counterName)
+                                    // .filter(oc => oc.startsWith(this.state.counterName) && oc !== this.state.counterName)
                                     .sort()
                                     .map(counterToLi)
                             }

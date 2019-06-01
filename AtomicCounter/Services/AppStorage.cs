@@ -30,6 +30,8 @@ namespace AtomicCounter.Services
         public const string StripesKey = "stripes";
         public const string CountersKey = "counters";
 
+        private static readonly SHA256 Hasher = SHA256.Create();
+
         public static async Task DeleteCounterAsync(string counter, ILogger logger)
         {
             var counterClient = new CountStorage(counter, logger);
@@ -247,23 +249,19 @@ namespace AtomicCounter.Services
         {
             var blob = GetStripeContainer();
 
-            using (SHA256 hasher = SHA256.Create())
-            {
-                var hashed = Base64UrlEncoder.Encode(hasher.ComputeHash(Encoding.UTF8.GetBytes(code)));
-                var block = blob.GetBlockBlobReference(hashed);
+            var hashed = Base64UrlEncoder.Encode(Hasher.ComputeHash(Encoding.UTF8.GetBytes(code)));
+            var block = blob.GetBlockBlobReference(hashed);
 
-                if (await block.ExistsAsync().ConfigureAwait(false))
-                {
-                    var data = await block.DownloadTextAsync().ConfigureAwait(false);
-                    return JsonConvert.DeserializeObject<OAuthToken>(data);
-                }
-                else
-                {
-                    var data = await tokenFactory().ConfigureAwait(false);
-                    var content = JsonConvert.SerializeObject(data);
-                    await block.UploadTextAsync(content).ConfigureAwait(false);
-                    return data;
-                }
+            if (await block.ExistsAsync().ConfigureAwait(false))
+            {
+                var data = await block.DownloadTextAsync().ConfigureAwait(false);
+                return JsonConvert.DeserializeObject<OAuthToken>(data);
+            }
+            else
+            {
+                var data = await tokenFactory().ConfigureAwait(false);
+                await block.UploadTextAsync(JsonConvert.SerializeObject(data)).ConfigureAwait(false);
+                return data;
             }
         }
 
@@ -402,7 +400,7 @@ namespace AtomicCounter.Services
         private static CloudBlobContainer GetStripeContainer()
         {
             var blobClient = Storage.CreateCloudBlobClient();
-            return blobClient.GetContainerReference(ProfilesKey);
+            return blobClient.GetContainerReference(StripesKey);
         }
 
         public static CloudBlobContainer GetCounterMetadataContainer()
@@ -435,8 +433,10 @@ namespace AtomicCounter.Services
             var blobClient = Storage.CreateCloudBlobClient();
             var counters = blobClient.GetContainerReference(CountersKey);
             var profiles = blobClient.GetContainerReference(ProfilesKey);
+            var stripes = blobClient.GetContainerReference(StripesKey);
             tasks.Add(counters.CreateIfNotExistsAsync());
             tasks.Add(profiles.CreateIfNotExistsAsync());
+            tasks.Add(stripes.CreateIfNotExistsAsync());
 
             Task.WaitAll(tasks.ToArray());
         }
