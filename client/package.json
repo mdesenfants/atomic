@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@material-ui/core": "^3.9.2",
-    "@types/material-ui": "^0.21.5",
+    "@types/material-ui": "^0.21.6",
     "bootstrap": "^4.3.1",
     "react": "^16.7.0",
     "react-dom": "^16.7.0",
