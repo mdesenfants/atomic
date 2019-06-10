@@ -25,6 +25,7 @@ export default class StripeLogin extends React.Component<IStripeProps, IStripeSt
     public render() {
         const callback = this.signIn.bind(this);
 
+        
         if (window.location.search) {
             const query = new URLSearchParams(window.location.search);
             window.localStorage.setItem(tokenLocation, query.get('code') || '');

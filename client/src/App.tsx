@@ -10,6 +10,8 @@ import Typography from '@material-ui/core/Typography';
 
 import StripeLogin from './StripeLogin';
 
+import * as lev from 'fast-levenshtein';
+
 interface IAppState {
     client: AtomicCounterClient | null;
     count: number;
@@ -73,12 +75,22 @@ class App extends React.Component<{}, IAppState> {
         const handle = (evt: React.ChangeEvent<HTMLInputElement>) => this.handleCounterNameChange(evt);
         const counter = () => this.createCounter();
 
+        const searchIsSet = this.state.counterName != null && this.state.counterName !== '';
+
+        const compare = (a: string, b: string): number =>
+            (searchIsSet && this.state.otherCounters.indexOf(this.state.counterName) < 0)
+                ? lev.get(a, this.state.counterName, { useCollator: true }) - lev.get(b, this.state.counterName, { useCollator: true })
+                : (a < b ? -1 : 1);
+
+
         const counterToLi = (input: string) =>
             <p key={input} >
                 <a href="#" onClick={selectCounter(input)}>
                     {input}
                 </a>
             </p>;
+
+        const counters = this.state.otherCounters.sort(compare).map(counterToLi);
 
         return (
             <React.Fragment>
@@ -113,13 +125,8 @@ class App extends React.Component<{}, IAppState> {
                                 onClick={counter}
                                 hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
                                 Create Counter
-                        </button>
-                            {
-                                this.state.otherCounters
-                                    // .filter(oc => oc.startsWith(this.state.counterName) && oc !== this.state.counterName)
-                                    .sort()
-                                    .map(counterToLi)
-                            }
+                            </button>
+                            {counters}
                         </Grid>
                         <Grid item={true} xs={9}>
                             {this.renderTools()}
