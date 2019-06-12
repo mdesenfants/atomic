@@ -3,7 +3,7 @@ import './App.css';
 
 import { AtomicCounterClient, counterNameIsValid } from './atomic-counter/build/dist/atomicCounter';
 
-import { AppBar, CssBaseline, Paper, Toolbar } from '@material-ui/core';
+import { AppBar, Button, CssBaseline, Paper, Toolbar } from '@material-ui/core';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
@@ -121,11 +121,11 @@ class App extends React.Component<{}, IAppState> {
                                 value={this.state.counterName}
                                 onChange={handle}
                             />
-                            <button
+                            <Button
                                 onClick={counter}
                                 hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
                                 Create Counter
-                            </button>
+                            </Button>
                             {counters}
                         </Grid>
                         <Grid item={true} xs={9}>

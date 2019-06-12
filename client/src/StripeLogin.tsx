@@ -25,24 +25,25 @@ export default class StripeLogin extends React.Component<IStripeProps, IStripeSt
     public render() {
         const callback = this.signIn.bind(this);
 
-        
+        const token = window.localStorage.getItem(tokenLocation);
+
         if (window.location.search) {
             const query = new URLSearchParams(window.location.search);
             window.localStorage.setItem(tokenLocation, query.get('code') || '');
             window.location.replace('/');
-        } else {
-            const token = window.localStorage.getItem(tokenLocation);
-
-            if (token && token !== "") {
-                this.state.tokenCallback(token);
-            }
+        } else if (token) {
+            this.state.tokenCallback(token);
         }
+
+        const logout = (): any => {
+            window.localStorage.removeItem(tokenLocation);
+        };
 
         return (
             <Button
                 variant="text"
-                onClick={callback}>
-                LOGIN
+                onClick={token ? logout : callback}>
+                {token ? "LOGOUT" : "LOGIN"}
             </Button>
         );
     }

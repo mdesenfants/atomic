@@ -60,7 +60,7 @@ namespace AtomicCounter
 
             return await AppStorage.GetOrCreateStripeInfo(code, async () =>
             {
-                return await (new OAuthTokenService()).CreateAsync(new OAuthTokenCreateOptions()
+                return await new OAuthTokenService().CreateAsync(new OAuthTokenCreateOptions()
                 {
                     ClientSecret = Environment.GetEnvironmentVariable(StripeSecretSetting),
                     Code = code,
