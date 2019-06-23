@@ -65,15 +65,6 @@ namespace AtomicCounter.Test
             // Increment counter for client and time rnage
             var min = new DateTime(DateTime.UtcNow.Ticks, DateTimeKind.Utc);
 
-            await SetPrice(mockAuth, req, counterViewModel.CounterName, logger, 1).ConfigureAwait(false);
-            getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel).ConfigureAwait(false);
-            Assert.IsNotNull(getCounterViewModel.PriceChanges.SingleOrDefault());
-            await Increment(mockAuth, req, logger, getCounterViewModel, ClientName).ConfigureAwait(false);
-            await HandleCountEvents(logger).ConfigureAwait(false);
-
-            await SetPrice(mockAuth, req, counterViewModel.CounterName, logger, 2).ConfigureAwait(false);
-            getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel).ConfigureAwait(false);
-            Assert.IsTrue(getCounterViewModel.PriceChanges.Count() == 2);
             await Increment(mockAuth, req, logger, getCounterViewModel, ClientName).ConfigureAwait(false);
             await HandleCountEvents(logger).ConfigureAwait(false);
 
@@ -81,19 +72,19 @@ namespace AtomicCounter.Test
 
             // Check counts for different slices
             await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client count.", client: ClientName).ConfigureAwait(false);
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Date count.", min: min, max: max).ConfigureAwait(false);
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "Client and date count", min: min, max: max, client: ClientName).ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Date count.", min: min, max: max).ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 3, "Client and date count.", min: min, max: max, client: ClientName).ConfigureAwait(false);
 
             // Get the invoice for the last 6 entries
             var counterClient = new CountStorage(getCounterViewModel.CounterName, logger);
             var invoice = await counterClient.GetInvoiceDataAsync(min, max).ConfigureAwait(false);
-            Assert.AreEqual(1, invoice.Keys.Count());
-            var lines = invoice.Values.First();
-            Assert.AreEqual(2, lines.Count());
-            Assert.AreEqual(9, lines.Sum(l => l.Price * l.Quantity));
+            Assert.AreEqual(1, invoice.Count());
+            var lines = invoice.First();
+            Assert.AreEqual(3, lines.Quantity);
+            Assert.AreEqual(0, lines.Price);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 9, "First count.").ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 6, "First count.").ConfigureAwait(false);
 
             // Rotate read keys
             await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1).ConfigureAwait(false);
@@ -114,48 +105,13 @@ namespace AtomicCounter.Test
             await HandleCountEvents(logger).ConfigureAwait(false);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 12, "Count after rotation.").ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 9, "Count after rotation.").ConfigureAwait(false);
 
             // Should reset count to zero
             await RunResetCounter(mockAuth, req, logger).ConfigureAwait(false);
 
             // Makes sure counter was reset
             await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.").ConfigureAwait(false);
-        }
-
-        private static async Task SetPrice(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, string counter, TestLogger logger, decimal amount)
-        {
-            SubmitPriceChange.AuthProvider = mockAuth.Object;
-            req.Method = "POST";
-
-            var change = new PriceChangeEvent()
-            {
-                Counter = counter,
-                Amount = amount,
-                Currency = "usd",
-            }.ToJson();
-
-            using (var body = new MemoryStream(Encoding.UTF8.GetBytes(change)))
-            {
-                req.Body = body;
-                var readRotateResult = (AcceptedResult)await SubmitPriceChange.Run(req, counter, logger).ConfigureAwait(false);
-                Assert.IsNotNull(readRotateResult);
-            }
-
-            var queueClient = Initialize.Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(AppStorage.PriceChangeEventsQueueName);
-
-            do
-            {
-                var countEvents = await queue.GetMessagesAsync(30).ConfigureAwait(false);
-                if (countEvents == null || countEvents.Count() == 0) return;
-
-                foreach (var evt in countEvents)
-                {
-                    await PriceChangeEventHandler.Run(evt.AsString.FromJson<PriceChangeEvent>(), logger).ConfigureAwait(false);
-                    await queue.DeleteMessageAsync(evt).ConfigureAwait(false);
-                }
-            } while (true);
         }
 
         private static async Task<CounterViewModel> AddCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)

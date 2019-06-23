@@ -65,7 +65,7 @@ namespace AtomicCounter.Services
             }
         }
 
-        public async Task IncrementAsync(Guid id, string client, long count = 1)
+        public async Task IncrementAsync(Guid id, long count = 1, decimal value = 0)
         {
             var table = GetCounterTable();
 
@@ -74,7 +74,7 @@ namespace AtomicCounter.Services
                 PartitionKey = CountPartition,
                 RowKey = id.ToString(),
                 Count = count,
-                Client = client
+                Value = value
             });
 
             await table.ExecuteAsync(insert).ConfigureAwait(false);
@@ -113,11 +113,6 @@ namespace AtomicCounter.Services
             return sum;
         }
 
-        public async Task<long> CountAsync(string client)
-        {
-            return await CountAsync(x => client.Equals(x.Client, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
-        }
-
         public async Task<long> CountAsync(DateTimeOffset min, DateTimeOffset max)
         {
             return await CountAsync(x => DateInRange(x.Timestamp, min, max)).ConfigureAwait(false);
@@ -130,14 +125,7 @@ namespace AtomicCounter.Services
             return timestamp >= min && timestamp < max;
         }
 
-        public async Task<long> CountAsync(string client, DateTimeOffset min, DateTimeOffset max)
-        {
-            return await CountAsync(x =>
-                client.Equals(x.Client, StringComparison.OrdinalIgnoreCase) &&
-                DateInRange(x.Timestamp, min, max)).ConfigureAwait(false);
-        }
-
-        public async Task<Dictionary<string, IEnumerable<ChargeGroup>>> GetInvoiceDataAsync(DateTimeOffset min, DateTimeOffset max)
+        public async Task<IEnumerable<ChargeGroup>> GetInvoiceDataAsync(DateTimeOffset min, DateTimeOffset max)
         {
             try
             {
@@ -145,62 +133,42 @@ namespace AtomicCounter.Services
 
                 if (table == null)
                 {
-                    return new Dictionary<string, IEnumerable<ChargeGroup>>();
+                    return new List<ChargeGroup>();
                 }
 
                 var meta = await AppStorage.GetCounterMetadataAsync(Counter).ConfigureAwait(false);
 
-                // Create a sorted lookup so we classify records to their bucket quickly
-                var lookup = new SortedSet<DateTimeOffset>(
-                    meta
-                        .PriceChanges.Where(k => DateInRange(k.Effective, min, max)).Select(k => k.Effective.Value))
-                    .Reverse();
-
-                // Create price lookup
-                var prices = meta.PriceChanges.ToDictionary(x => x.Effective, y => y.Amount);
-
-                // Make buckets by price change effective date, starting with 0
-                Dictionary<DateTimeOffset, long> getBuckets() => meta.PriceChanges.ToDictionary(x => x.Effective.Value, y => 0L);
-
                 var query = new TableQuery<CountEntity>()
                     .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
 
-                var clients = new Dictionary<string, Dictionary<DateTimeOffset, long>>();
+                var clients = new Dictionary<string, Dictionary<decimal, long>>();
 
                 TableContinuationToken token = null;
+
+                var groups = new Dictionary<decimal, long>();
+
                 do
                 {
                     var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token).ConfigureAwait(false);
-                    var filtered = resultSegment.Where(r => DateInRange(r.Timestamp, min, max) && !string.IsNullOrEmpty(r.Client));
-                    foreach (var result in filtered)
-                    {
-                        if (!clients.TryGetValue(result.Client, out var changes))
-                        {
-                            changes = getBuckets();
-                            clients[result.Client] = changes;
-                        }
+                    var filtered = resultSegment.Where(r => DateInRange(r.Timestamp, min, max));
 
-                        // Add count to bucket based on the first price change that is before the record timestamp
-                        var bucket = lookup.FirstOrDefault(pc => pc <= result.Timestamp);
-                        if (bucket > DateTimeOffset.MinValue)
-                        {
-                            changes[bucket] += result.Count;
-                        }
+                    foreach (var item in filtered)
+                    {
+                        groups[item.Value] = groups.ContainsKey(item.Value) ? groups[item.Value] + item.Count : item.Count;
                     }
 
                     token = resultSegment.ContinuationToken;
                 } while (token != null);
 
-                return clients.ToDictionary(c => c.Key, v => v.Value.Select(x => new ChargeGroup()
+                return groups.Select(x => new ChargeGroup()
                 {
-                    Effective = x.Key,
-                    Price = prices[x.Key],
+                    Price = x.Key,
                     Quantity = x.Value
-                }).Where(y => y.Quantity != 0));
+                });
             }
             catch
             {
-                logger.LogWarning($"There was a problem counting {Counter}. Defaulting to 0.");
+                logger.LogWarning($"There was a problem counting {Counter} when getting invoice data.");
                 throw;
             }
         }
@@ -209,6 +177,6 @@ namespace AtomicCounter.Services
     public class CountEntity : TableEntity
     {
         public long Count { get; set; }
-        public string Client { get; set; }
+        public decimal Value { get; set; }
     }
 }

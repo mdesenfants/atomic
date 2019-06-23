@@ -15,12 +15,6 @@ namespace AtomicCounter.Api
     {
         public static IAuthorizationProvider AuthProvider { get; set; } = new AuthorizationProvider();
 
-        private enum Mode : int
-        {
-            Client = 1,
-            Date = 2,
-        }
-
         [FunctionName(nameof(Count))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "counter/{counter}/count")]HttpRequest req,
@@ -33,12 +27,6 @@ namespace AtomicCounter.Api
             {
                 var query = req.GetQueryParameterDictionary();
 
-                var mode = 0;
-                if (query.TryGetValue("client", out var client))
-                {
-                    mode |= (int)Mode.Client;
-                }
-
                 var minParam = req.Query["min"].FirstOrDefault();
                 var maxParam = req.Query["max"].FirstOrDefault();
 
@@ -48,7 +36,6 @@ namespace AtomicCounter.Api
                     if (minParam != null)
                     {
                         min = DateTimeOffset.ParseExact(minParam, "o", CultureInfo.InvariantCulture);
-                        mode |= (int)Mode.Date;
                     }
                 }
                 catch
@@ -62,7 +49,6 @@ namespace AtomicCounter.Api
                     if (maxParam != null)
                     {
                         max = DateTimeOffset.ParseExact(maxParam, "o", CultureInfo.InvariantCulture);
-                        mode |= (int)Mode.Date;
                     }
                 }
                 catch
@@ -73,17 +59,9 @@ namespace AtomicCounter.Api
                 var storage = new CountStorage(counter, log);
                 long result = 0;
 
-                if (mode == ((int)Mode.Date | (int)Mode.Client))
-                {
-                    result = await storage.CountAsync(client, min, max).ConfigureAwait(false);
-                }
-                else if (mode == (int)Mode.Date)
+                if (min != DateTimeOffset.MinValue || max != DateTimeOffset.MaxValue)
                 {
                     result = await storage.CountAsync(min, max).ConfigureAwait(false);
-                }
-                else if (mode == (int)Mode.Client)
-                {
-                    result = await storage.CountAsync(client).ConfigureAwait(false);
                 }
                 else
                 {

@@ -62,22 +62,6 @@ namespace AtomicCounter.Services
             await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null).ConfigureAwait(false);
         }
 
-        public static async Task SendPriceChangeEventAsync(IPriceChange change)
-        {
-            var evt = new PriceChangeEvent()
-            {
-                Amount = change.Amount,
-                Counter = change.Counter,
-                Currency = change.Currency,
-                Effective = change.Effective ?? DateTimeOffset.UtcNow
-            };
-
-            var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
-            var message = new CloudQueueMessage(change.ToJson());
-            await queue.AddMessageAsync(message).ConfigureAwait(false);
-        }
-
         public static async Task SendInvoiceRequestEventAsync(string counter, DateTimeOffset min, DateTimeOffset max)
         {
             var queueClient = Storage.CreateCloudQueueClient();
@@ -92,13 +76,6 @@ namespace AtomicCounter.Services
 
             var message = new CloudQueueMessage(invoiceEvent.ToJson());
             await queue.AddMessageAsync(message).ConfigureAwait(false);
-        }
-
-        public static async Task HandlePriceChangeEventAsync(PriceChangeEvent change)
-        {
-            var meta = await GetCounterMetadataAsync(change.Counter).ConfigureAwait(false);
-            meta.PriceChanges.Add(change);
-            await SaveCounterMetadataAsync(meta).ConfigureAwait(false);
         }
 
         public static async Task<int> RetryPoisonIncrementEventsAsync(ILogger log, CancellationToken token)
@@ -327,10 +304,10 @@ namespace AtomicCounter.Services
             }
         }
 
-        public static async Task SaveInvoiceAsync(string counter, string client, DateTimeOffset min, DateTimeOffset max, IEnumerable<ChargeGroup> invoice)
+        public static async Task SaveInvoiceAsync(string counter, DateTimeOffset min, DateTimeOffset max, IEnumerable<ChargeGroup> invoice)
         {
             var blobClient = Storage.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference($"{counter}/{client}");
+            var container = blobClient.GetContainerReference($"{counter}");
             var ranges = Uri.EscapeDataString(min.ToString("o", CultureInfo.InvariantCulture)) + "-" + Uri.EscapeDataString(max.ToString("o", CultureInfo.InvariantCulture)) + ".json";
             var blob = container.GetBlockBlobReference(ranges);
             await blob.UploadTextAsync(invoice.ToJson()).ConfigureAwait(false);

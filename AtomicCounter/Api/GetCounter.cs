@@ -33,8 +33,7 @@ namespace AtomicCounter.Api
                 ReadKeys = existing.ReadKeys
                     .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
                 WriteKeys = existing.WriteKeys
-                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
-                PriceChanges = existing.PriceChanges
+                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
             })).ConfigureAwait(false);
         }
     }

@@ -1,5 +1,4 @@
-﻿using AtomicCounter.Models.Events;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
@@ -24,7 +23,6 @@ namespace AtomicCounter.Models
         public HashSet<Guid> Profiles { get; } = new HashSet<Guid>();
         public IList<string> WriteKeys { get; } = new List<string>();
         public IList<string> ReadKeys { get; } = new List<string>();
-        public IList<PriceChangeEvent> PriceChanges { get; } = new List<PriceChangeEvent>();
         public DateTimeOffset LastInvoiceRun { get; set; } = DateTimeOffset.MinValue;
         public DateTimeOffset NextInvoiceRun { get; set; } = DateTimeOffset.MaxValue;
         public bool AutoSubmit { get; set; } = false;

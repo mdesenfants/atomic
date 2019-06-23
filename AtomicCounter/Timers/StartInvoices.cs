@@ -30,8 +30,7 @@ namespace AtomicCounter.Timers
                     var counter = await AppStorage.GetCounterMetadataAsync(record.Name).ConfigureAwait(false);
 
                     if (counter.InvoiceFrequency == InvoiceFrequency.Never ||
-                        counter.NextInvoiceRun > DateTimeOffset.Now ||
-                        !counter.PriceChanges.Any())
+                        counter.NextInvoiceRun > DateTimeOffset.Now)
                     {
                         return;
                     }

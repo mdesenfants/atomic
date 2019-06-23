@@ -20,10 +20,7 @@ namespace AtomicCounter.EventHandlers
             var client = new CountStorage(request.Counter, log);
             var data = await client.GetInvoiceDataAsync(request.Min, request.Max).ConfigureAwait(false);
 
-            foreach (var record in data)
-            {
-                await AppStorage.SaveInvoiceAsync(request.Counter, record.Key, request.Min, request.Max, record.Value).ConfigureAwait(false);
-            }
+            await AppStorage.SaveInvoiceAsync(request.Counter, request.Min, request.Max, data).ConfigureAwait(false);
 
             var meta = await AppStorage.GetCounterMetadataAsync(request.Counter).ConfigureAwait(false);
 
