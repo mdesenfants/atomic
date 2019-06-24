@@ -1,16 +1,16 @@
-import * as React from 'react';
-import './App.css';
+import * as React from "react";
+import "./App.css";
 
-import { AtomicCounterClient, counterNameIsValid } from './atomic-counter/build/dist/atomicCounter';
+import { AtomicCounterClient, counterNameIsValid } from "./atomic-counter/build/dist/atomicCounter";
 
-import { AppBar, Button, CssBaseline, Paper, Toolbar } from '@material-ui/core';
-import Grid from '@material-ui/core/Grid';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
+import { AppBar, Button, CssBaseline, Toolbar } from "@material-ui/core";
+import Grid from "@material-ui/core/Grid";
+import TextField from "@material-ui/core/TextField";
+import Typography from "@material-ui/core/Typography";
 
-import StripeLogin from './StripeLogin';
+import StripeLogin from "./StripeLogin";
 
-import * as lev from 'fast-levenshtein';
+import * as lev from "fast-levenshtein";
 
 interface IAppState {
     client: AtomicCounterClient | null;
@@ -36,7 +36,8 @@ class App extends React.Component<{}, IAppState> {
 
     public componentDidMount() {
         setInterval(() => {
-            if (!this.state.disabled && counterNameIsValid(this.state.counterName) || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
+            if (!this.state.disabled && counterNameIsValid(this.state.counterName)
+                || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
                 if (this.state.client) {
                     this.state.client.count(this.state.counterName).then(x => this.setState({ count: x }));
                 }
@@ -47,9 +48,11 @@ class App extends React.Component<{}, IAppState> {
     public render() {
         const callback = (value: any) => {
             if (!this.state.client) {
-                const curr = new AtomicCounterClient(() => Promise.resolve(window.localStorage.getItem('stripe_token') || ''));
-                curr.getCounters().then(x => {
-                    this.setState({ client: curr, otherCounters: x })
+                const curr = new AtomicCounterClient(
+                    () => Promise.resolve(window.localStorage.getItem("stripe_token") || ""));
+
+                curr.getCounters().then((x) => {
+                    this.setState({ client: curr, otherCounters: x });
                 });
             }
         };
@@ -65,7 +68,7 @@ class App extends React.Component<{}, IAppState> {
                     this.state.client.count(input).then(c => {
                         this.setState({
                             count: c,
-                            disabled: false
+                            disabled: false,
                         });
                     });
                 }
@@ -75,20 +78,22 @@ class App extends React.Component<{}, IAppState> {
         const handle = (evt: React.ChangeEvent<HTMLInputElement>) => this.handleCounterNameChange(evt);
         const counter = () => this.createCounter();
 
-        const searchIsSet = this.state.counterName != null && this.state.counterName !== '';
+        const searchIsSet = this.state.counterName != null && this.state.counterName !== "";
 
         const compare = (a: string, b: string): number =>
             (searchIsSet && this.state.otherCounters.indexOf(this.state.counterName) < 0)
+                // tslint:disable-next-line:max-line-length
                 ? lev.get(a, this.state.counterName, { useCollator: true }) - lev.get(b, this.state.counterName, { useCollator: true })
                 : (a < b ? -1 : 1);
 
 
-        const counterToLi = (input: string) =>
+        const counterToLi = (input: string) => (
             <p key={input} >
                 <a href="#" onClick={selectCounter(input)}>
                     {input}
                 </a>
-            </p>;
+            </p>
+        );
 
         const counters = this.state.otherCounters.sort(compare).map(counterToLi);
 
@@ -123,7 +128,9 @@ class App extends React.Component<{}, IAppState> {
                             />
                             <Button
                                 onClick={counter}
-                                hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}>
+                                // tslint:disable-next-line:max-line-length
+                                hidden={this.state.otherCounters.indexOf(this.state.counterName) !== -1 || !counterNameIsValid(this.state.counterName)}
+                            >
                                 Create Counter
                             </Button>
                             {counters}
@@ -155,25 +162,16 @@ class App extends React.Component<{}, IAppState> {
         const lpad = (input: number) => input.toLocaleString(undefined, { minimumIntegerDigits: 12 });
 
         return (
-            <Paper>
+            <div>
                 <p>
                     {lpad(this.state.count)}
                 </p>
-                <hr />
-                <form>
-                    <label>Cost per increment</label>
-                    <input type="text" pattern="[0-9]+.?[0-9]?" />
-                    <br />
-                    <label>Effective date</label>
-                    <input type="text" pattern="[0-9]+.?[0-9]?" />
-                    <button>Submit change</button>
-                </form>
                 <hr />
                 <div title="Other actions" id="actions">
                     <button onClick={inc}>Increment</button>
                     <button onClick={reset}>Reset</button>
                 </div>
-            </Paper>
+            </div>
         );
     }
 
@@ -199,7 +197,7 @@ class App extends React.Component<{}, IAppState> {
             this.state.client.count(cname).then(c => {
                 this.setState({
                     count: c,
-                    disabled: false
+                    disabled: false,
                 });
             });
         }
