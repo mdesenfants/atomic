@@ -12,7 +12,7 @@ export async function increment(counter: string, key: string): Promise<void> {
         return Promise.resolve();
     }
 
-    if (!key || key.trim() === "") {
+    if (!key.trim()) {
         // tslint:disable-next-line:no-console
         console.warn("Must provide a write key. Returning without increment.");
         return Promise.resolve();
@@ -34,7 +34,7 @@ export async function count(counter: string, key: string): Promise<number> {
         return Promise.resolve(0);
     }
 
-    if (!key || key.trim() === "") {
+    if (!key.trim()) {
         // tslint:disable-next-line:no-console
         console.warn("Must provide a read key. Returning 0.");
         return Promise.resolve(0);

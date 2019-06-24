@@ -6,7 +6,7 @@ export function increment(counter, key) {
             console.warn("Counter name must be valid before inrementing. Returning without increment.");
             return yield Promise.resolve();
         }
-        if (!key || key.trim() === "") {
+        if (!key.trim()) {
             // tslint:disable-next-line:no-console
             console.warn("Must provide a write key. Returning without increment.");
             return yield Promise.resolve();
@@ -27,11 +27,12 @@ export function count(counter, key) {
             console.warn("Counter name must be valid before counting. Returning 0.");
             return yield Promise.resolve(0);
         }
-        if (!key || key.trim() === "") {
+        if (!key.trim()) {
             // tslint:disable-next-line:no-console
             console.warn("Must provide a read key. Returning 0.");
             return yield Promise.resolve(0);
         }
+        
         return yield fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/count?key=${key}`, {
             headers: {
                 "Accept": "application/json",
