@@ -9,21 +9,21 @@ export async function increment(counter: string, key: string): Promise<void> {
     if (!counterNameIsValid(counter)) {
         // tslint:disable-next-line:no-console
         console.warn("Counter name must be valid before inrementing. Returning without increment.");
-        return await Promise.resolve();
+        return Promise.resolve();
     }
 
     if (!key || key.trim() === "") {
         // tslint:disable-next-line:no-console
         console.warn("Must provide a write key. Returning without increment.");
-        return await Promise.resolve();
+        return Promise.resolve();
     }
 
     await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/increment?key=${key}`, {
         headers: {
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        method: "POST"
+        method: "POST",
     });
 }
 
@@ -31,13 +31,13 @@ export async function count(counter: string, key: string): Promise<number> {
     if (!counterNameIsValid(counter)) {
         // tslint:disable-next-line:no-console
         console.warn("Counter name must be valid before counting. Returning 0.");
-        return await Promise.resolve(0);
+        return Promise.resolve(0);
     }
 
     if (!key || key.trim() === "") {
         // tslint:disable-next-line:no-console
         console.warn("Must provide a read key. Returning 0.");
-        return await Promise.resolve(0);
+        return Promise.resolve(0);
     }
 
     return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/count?key=${key}`, {
@@ -64,7 +64,7 @@ export class AtomicCounterClient {
         if (!counterNameIsValid(counter)) {
             // tslint:disable-next-line:no-console
             console.warn("Counter name must be vaid before creation. Returning null.");
-            return await Promise.resolve(null);
+            return Promise.resolve(null);
         }
 
         return await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${encodeURI(counter)}`, {
@@ -132,7 +132,7 @@ export class AtomicCounterClient {
         if (!counterNameIsValid(counter)) {
             // tslint:disable-next-line:no-console
             console.warn("Counter name must be valid to count. Returning 0.");
-            return await Promise.resolve(0);
+            return Promise.resolve(0);
         }
 
         const meta = await this.getCounter(counter);
@@ -141,7 +141,7 @@ export class AtomicCounterClient {
         if (!key) {
             // tslint:disable-next-line:no-console
             console.warn("Could not find read keys. Returning 0.");
-            return await Promise.resolve(0);
+            return Promise.resolve(0);
         }
 
         return await count(counter, key).catch(() => 0);
@@ -151,7 +151,7 @@ export class AtomicCounterClient {
         if (!counterNameIsValid(counter)) {
             // tslint:disable-next-line:no-console
             console.warn("Counter name must be valid before resetting. Returning without reset.");
-            return await Promise.resolve();
+            return Promise.resolve();
         }
 
         await fetch(`https://atomiccounter.azurewebsites.net/api/counter/${counter}/reset`, {

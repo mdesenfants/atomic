@@ -3,10 +3,7 @@ import "./App.css";
 
 import { AtomicCounterClient, counterNameIsValid } from "./atomic-counter/build/dist/atomicCounter";
 
-import { AppBar, Button, CssBaseline, Toolbar } from "@material-ui/core";
-import Grid from "@material-ui/core/Grid";
-import TextField from "@material-ui/core/TextField";
-import Typography from "@material-ui/core/Typography";
+import { AppBar, Button, CssBaseline, Grid, TextField, Toolbar, Typography } from "@material-ui/core";
 
 import StripeLogin from "./StripeLogin";
 
@@ -39,7 +36,7 @@ class App extends React.Component<{}, IAppState> {
             if (!this.state.disabled && counterNameIsValid(this.state.counterName)
                 || this.state.otherCounters.indexOf(this.state.counterName) > -1) {
                 if (this.state.client) {
-                    this.state.client.count(this.state.counterName).then(x => this.setState({ count: x }));
+                    this.state.client.count(this.state.counterName).then((x) => this.setState({ count: x }));
                 }
             }
         }, 20000);
@@ -65,7 +62,7 @@ class App extends React.Component<{}, IAppState> {
                 });
 
                 if (this.state.client) {
-                    this.state.client.count(input).then(c => {
+                    this.state.client.count(input).then((c) => {
                         this.setState({
                             count: c,
                             disabled: false,
@@ -85,7 +82,6 @@ class App extends React.Component<{}, IAppState> {
                 // tslint:disable-next-line:max-line-length
                 ? lev.get(a, this.state.counterName, { useCollator: true }) - lev.get(b, this.state.counterName, { useCollator: true })
                 : (a < b ? -1 : 1);
-
 
         const counterToLi = (input: string) => (
             <p key={input} >
@@ -116,7 +112,7 @@ class App extends React.Component<{}, IAppState> {
                 <div className="container">
                     <CssBaseline />
 
-                    <Grid container={true} spacing={24}>
+                    <Grid container={true} spacing={9}>
                         <Grid item={true} xs={3}>
                             <Typography variant="h6">Counters</Typography>
                             <TextField
@@ -147,7 +143,7 @@ class App extends React.Component<{}, IAppState> {
     private renderTools(): React.ReactNode {
         if (!counterNameIsValid(this.state.counterName)) {
             return <Typography variant="h6">Select or create a counter to continue.</Typography>;
-        };
+        }
 
         if (this.state.disabled && this.state.otherCounters.indexOf(this.state.counterName) > -1) {
             return <Typography variant="h6">Loading...</Typography>;
@@ -178,7 +174,7 @@ class App extends React.Component<{}, IAppState> {
     private async createCounter() {
         if (this.state.client) {
             await this.state.client.createCounter(this.state.counterName);
-            this.setState({ otherCounters: await this.state.client.getCounters() })
+            this.setState({ otherCounters: await this.state.client.getCounters() });
         }
     }
 
@@ -194,7 +190,7 @@ class App extends React.Component<{}, IAppState> {
                 return;
             }
 
-            this.state.client.count(cname).then(c => {
+            this.state.client.count(cname).then((c) => {
                 this.setState({
                     count: c,
                     disabled: false,

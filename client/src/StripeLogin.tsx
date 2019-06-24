@@ -42,7 +42,8 @@ export default class StripeLogin extends React.Component<IStripeProps, IStripeSt
         return (
             <Button
                 variant="text"
-                onClick={token ? logout : callback}>
+                onClick={token ? logout : callback}
+            >
                 {token ? "LOGOUT" : "LOGIN"}
             </Button>
         );
