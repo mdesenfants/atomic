@@ -29,5 +29,8 @@ namespace AtomicCounter.Models
 
         [JsonConverter(typeof(StringEnumConverter))]
         public InvoiceFrequency InvoiceFrequency { get; set; } = InvoiceFrequency.Never;
+
+        [JsonIgnore]
+        public string CanonicalName => CounterName.ToCanonicalName();
     }
 }

@@ -19,9 +19,8 @@ namespace AtomicCounter.Api
             log.LogInformation("Getting counters for user profile.");
 
             return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
-            {
-                return await Task.FromResult(new OkObjectResult(profile.Counters)).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                await Task.FromResult(new OkObjectResult(profile.Counters)).ConfigureAwait(false)
+            ).ConfigureAwait(false);
         }
     }
 }

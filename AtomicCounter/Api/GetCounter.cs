@@ -31,9 +31,9 @@ namespace AtomicCounter.Api
             {
                 CounterName = existing.CounterName,
                 ReadKeys = existing.ReadKeys
-                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x)),
+                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CanonicalName, x)),
                 WriteKeys = existing.WriteKeys
-                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CounterName, x))
+                    .Select(x => AuthorizationHelpers.CombineAndHash(existing.CanonicalName, x))
             })).ConfigureAwait(false);
         }
     }

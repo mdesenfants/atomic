@@ -133,9 +133,12 @@ namespace AtomicCounter.Services
 
         public static bool CounterNameIsValid(string name)
         {
+            name = name.ToCanonicalName();
+
             return name.Length <= 58 &&
                 name.Length > 3 &&
-                name.All(c => char.IsDigit(c) || char.IsLower(c));
+                char.IsLetter(name[0]) &&
+                name.All(char.IsLetterOrDigit);
         }
 
         internal static async Task<string[]> RotateKeysAsync(Counter counter, KeyMode mode)
@@ -173,11 +176,11 @@ namespace AtomicCounter.Services
             }
 
             var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(counter.CounterName);
+            var block = blob.GetBlockBlobReference(counter.CanonicalName);
 
             await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
 
-            return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CounterName, x)).ToArray();
+            return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CanonicalName, x)).ToArray();
         }
 
         public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid, string token)
@@ -244,14 +247,15 @@ namespace AtomicCounter.Services
 
         public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
         {
-            if (!CounterNameIsValid(counter))
+            var canonicalName = counter.ToCanonicalName();
+            if (!CounterNameIsValid(canonicalName))
             {
-                log.LogInformation($"Counter named '{counter}' was denied because it was invalid.");
+                log.LogInformation($"Counter name '{counter}' was denied because its canonical form ('{canonicalName}') is invalid.");
                 throw new InvalidOperationException();
             }
 
             var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(counter);
+            var block = blob.GetBlockBlobReference(canonicalName);
 
             if (await block.ExistsAsync().ConfigureAwait(false))
             {
@@ -334,7 +338,7 @@ namespace AtomicCounter.Services
 
         public static async Task<Counter> GetCounterMetadataAsync(UserProfile profile, string counter)
         {
-            var existing = await GetCounterMetadataAsync(counter).ConfigureAwait(false);
+            var existing = await GetCounterMetadataAsync(counter.ToCanonicalName()).ConfigureAwait(false);
 
             if (existing == null)
             {
@@ -351,7 +355,7 @@ namespace AtomicCounter.Services
         public static async Task<Counter> GetCounterMetadataAsync(string counter)
         {
             var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(counter);
+            var block = blob.GetBlockBlobReference(counter.ToCanonicalName());
 
             if (await block.ExistsAsync().ConfigureAwait(false))
             {
@@ -364,7 +368,7 @@ namespace AtomicCounter.Services
         public static async Task SaveCounterMetadataAsync(Counter counter)
         {
             var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(counter.CounterName);
+            var block = blob.GetBlockBlobReference(counter.CanonicalName);
             await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
         }
 

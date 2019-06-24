@@ -87,7 +87,8 @@ namespace AtomicCounter
         {
             try
             {
-                if (!AppStorage.CounterNameIsValid(counter))
+                var canonicalName = counter.ToCanonicalName();
+                if (!AppStorage.CounterNameIsValid(canonicalName))
                 {
                     return new BadRequestResult();
                 }

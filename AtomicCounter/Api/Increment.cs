@@ -29,15 +29,19 @@ namespace AtomicCounter.Api
                 async () =>
                 {
                     var cs = new CountStorage(counter, log);
-                    var client = req.Query["client"].FirstOrDefault() ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(client))
+                    var countParam = req.Query["count"].FirstOrDefault();
+                    long increment = 1;
+
+                    if (countParam != null && !long.TryParse(countParam, out increment))
                     {
-                        await cs.SendIncrementEventAsync(count, client).ConfigureAwait(false);
+                        return new BadRequestResult();
                     }
-                    else
-                    {
-                        await cs.SendIncrementEventAsync(count).ConfigureAwait(false);
-                    }
+
+                    var valueParam = req.Query["value"].FirstOrDefault();
+                    _ = decimal.TryParse(valueParam, out decimal value);
+
+
+                    await cs.SendIncrementEventAsync(increment, value).ConfigureAwait(false);
 
                     return new AcceptedResult();
                 }).ConfigureAwait(false);

@@ -19,11 +19,11 @@ namespace AtomicCounter.Services
 
         public CountStorage(string counter, ILogger logger)
         {
-            Counter = counter;
+            Counter = counter.ToCanonicalName();
             this.logger = logger;
         }
 
-        public async Task SendIncrementEventAsync(long count = 1, string client = null)
+        public async Task SendIncrementEventAsync(long count = 1, decimal value = 0)
         {
             var queueClient = AppStorage.Storage.CreateCloudQueueClient();
             var queue = queueClient.GetQueueReference(AppStorage.CountQueueName);
@@ -32,20 +32,15 @@ namespace AtomicCounter.Services
             {
                 Counter = Counter,
                 Count = count,
-                Client = client
+                Value = value
             }.ToJson());
 
             await queue.AddMessageAsync(message).ConfigureAwait(false);
         }
 
-        public static string Sanitize(string input)
-        {
-            return new string(input.Where(char.IsLetterOrDigit).ToArray());
-        }
-
         public static string Tableize(string input)
         {
-            return $"count{Sanitize(input)}";
+            return $"count{input.ToCanonicalName()}";
         }
 
         internal CloudTable GetCounterTable()
@@ -141,7 +136,7 @@ namespace AtomicCounter.Services
                 var query = new TableQuery<CountEntity>()
                     .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
 
-                var clients = new Dictionary<string, Dictionary<decimal, long>>();
+                var counters = new Dictionary<string, Dictionary<decimal, long>>();
 
                 TableContinuationToken token = null;
 

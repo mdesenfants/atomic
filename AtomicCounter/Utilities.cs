@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json;
+using System;
+using System.Linq;
 using System.Text;
 
 namespace AtomicCounter
@@ -28,6 +30,15 @@ namespace AtomicCounter
             if (string.IsNullOrWhiteSpace(input)) return default;
 
             return Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(input)).FromJson<T>();
+        }
+
+        public static string ToCanonicalName(this string input)
+        {
+            string start = input.ToUpperInvariant();
+            var firstAlpha = start.IndexOf(start.First(char.IsLetter));
+            var sanitized = string.Concat(start.Substring(firstAlpha, start.Length - firstAlpha).Where(char.IsLetterOrDigit));
+
+            return sanitized.Substring(0, Math.Min(sanitized.Length, 53));
         }
     }
 }
