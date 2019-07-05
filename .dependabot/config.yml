@@ -1,0 +1,14 @@
+version: 1
+
+update_configs:
+  - package_manager: "dotnet:nuget"
+    directory: "/AtomicCounter"
+    update_schedule: "live"
+
+  - package_manager: "dotnet:nuget"
+    directory: "/AtomicCounter.Test.Next"
+    update_schedule: "live"
+
+  - package_manager: "javascript"
+    directory: "/client"
+    update_schedule: "live"
