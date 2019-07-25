@@ -16,7 +16,9 @@ namespace AtomicCounter.Api
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "counters")]HttpRequest req,
             ILogger log)
         {
+
             log.LogInformation("Getting counters for user profile.");
+
 
             return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
                 await Task.FromResult(new OkObjectResult(profile.Counters)).ConfigureAwait(false)

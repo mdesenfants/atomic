@@ -15,6 +15,11 @@ namespace AtomicCounter.EventHandlers
             [QueueTrigger(AppStorage.InvoicRequestEventsQueueName, Connection = "AzureWebJobsStorage")]InvoiceRequestEvent request,
             ILogger log)
         {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
             log.LogInformation($"Handling invoice request: {request.Counter}");
 
             var client = new CountStorage(request.Counter, log);

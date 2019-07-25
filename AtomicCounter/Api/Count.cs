@@ -38,7 +38,7 @@ namespace AtomicCounter.Api
                         min = DateTimeOffset.ParseExact(minParam, "o", CultureInfo.InvariantCulture);
                     }
                 }
-                catch
+                catch (FormatException)
                 {
                     return new BadRequestObjectResult("Min query parameter timestamp must conform to ISO 8601.");
                 }
@@ -51,7 +51,7 @@ namespace AtomicCounter.Api
                         max = DateTimeOffset.ParseExact(maxParam, "o", CultureInfo.InvariantCulture);
                     }
                 }
-                catch
+                catch (FormatException)
                 {
                     return new BadRequestObjectResult("Max query parameter timestamp must conform to ISO 8601.");
                 }

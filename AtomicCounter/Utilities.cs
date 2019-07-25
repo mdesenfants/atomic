@@ -34,6 +34,11 @@ namespace AtomicCounter
 
         public static string ToCanonicalName(this string input)
         {
+            if (input == null)
+            {
+                throw new ArgumentNullException(nameof(input));
+            }
+
             string start = input.ToUpperInvariant();
             var firstAlpha = start.IndexOf(start.First(char.IsLetter));
             var sanitized = string.Concat(start.Substring(firstAlpha, start.Length - firstAlpha).Where(char.IsLetterOrDigit));

@@ -124,7 +124,9 @@ namespace AtomicCounter.Test
             await RunResetCounter(mockAuth, req, logger).ConfigureAwait(false);
 
             // Makes sure counter was reset
+
             await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.").ConfigureAwait(false);
+
         }
 
         private static async Task<CounterViewModel> AddCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)

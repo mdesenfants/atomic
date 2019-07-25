@@ -14,6 +14,16 @@ namespace AtomicCounter
     {
         public async Task<IActionResult> AuthorizeAppAndExecute(HttpRequest req, KeyMode mode, string counter, Func<Task<IActionResult>> action)
         {
+            if (action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            if (req == null)
+            {
+                throw new ArgumentNullException(nameof(req));
+            }
+
             try
             {
                 var key = req.Query["key"].FirstOrDefault();
@@ -64,13 +74,18 @@ namespace AtomicCounter
 
         public async Task<IActionResult> AuthorizeUserAndExecute(HttpRequest req, Func<UserProfile, Task<IActionResult>> action)
         {
+            if (action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
             try
             {
                 var authInfo = await (req?.GetAuthInfoAsync()).ConfigureAwait(false);
                 var userName = $"stripe|{authInfo.StripeUserId}";
 
 
-                UserProfile userProfile = await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.AccessToken).ConfigureAwait(false);
+                UserProfile userProfile = await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.StripeUserId).ConfigureAwait(false);
                 return await action(userProfile).ConfigureAwait(false);
             }
             catch (InvalidOperationException)

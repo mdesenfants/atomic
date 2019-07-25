@@ -89,7 +89,9 @@ namespace AtomicCounter.Services
             var retval = 0;
             if (await poison.ExistsAsync().ConfigureAwait(false))
             {
+
                 log.LogInformation("Found poison queue.");
+
                 var countSetting = Environment.GetEnvironmentVariable("ResetCount");
 
                 bool canContinue()
@@ -220,6 +222,11 @@ namespace AtomicCounter.Services
 
         public static async Task SaveUserProfileAsync(UserProfile profile)
         {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
             var blob = GetProfileContainer();
             var block = blob.GetBlockBlobReference(profile.Id.ToString());
             await block.UploadTextAsync(profile.ToJson()).ConfigureAwait(false);
@@ -227,6 +234,11 @@ namespace AtomicCounter.Services
 
         public static async Task<OAuthToken> GetOrCreateStripeInfo(string code, Func<Task<OAuthToken>> tokenFactory)
         {
+            if (tokenFactory == null)
+            {
+                throw new ArgumentNullException(nameof(tokenFactory));
+            }
+
             var blob = GetStripeContainer();
 
             var hashed = Base64UrlEncoder.Encode(Hasher.ComputeHash(Encoding.UTF8.GetBytes(code)));
@@ -247,6 +259,11 @@ namespace AtomicCounter.Services
 
         public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
         {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
             var canonicalName = counter.ToCanonicalName();
             if (!CounterNameIsValid(canonicalName))
             {
@@ -338,6 +355,11 @@ namespace AtomicCounter.Services
 
         public static async Task<Counter> GetCounterMetadataAsync(UserProfile profile, string counter)
         {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
             var existing = await GetCounterMetadataAsync(counter.ToCanonicalName()).ConfigureAwait(false);
 
             if (existing == null)
@@ -367,6 +389,11 @@ namespace AtomicCounter.Services
 
         public static async Task SaveCounterMetadataAsync(Counter counter)
         {
+            if (counter == null)
+            {
+                throw new ArgumentNullException(nameof(counter));
+            }
+
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CanonicalName);
             await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);

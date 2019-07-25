@@ -25,18 +25,25 @@ namespace AtomicCounter
 
         static AuthorizationHelpers()
         {
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(StripeSecretSetting));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(StripeSecretSetting);
         }
 
         public static string CombineAndHash(string a, string b)
         {
-            HashAlgorithm sha = new SHA256Managed();
-            var result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
-            return Base64UrlEncoder.Encode(result);
+            using (HashAlgorithm sha = new SHA256Managed())
+            {
+                var result = sha.ComputeHash(Encoding.UTF8.GetBytes(a + b));
+                return Base64UrlEncoder.Encode(result);
+            }
         }
 
         public static async Task<OAuthToken> GetAuthInfoAsync(this HttpRequest request)
         {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
             var value = GetAuthToken(request);
 
             if (string.IsNullOrWhiteSpace(value))
@@ -50,12 +57,16 @@ namespace AtomicCounter
 
             if (code.Length == 0)
             {
+
                 throw new InvalidOperationException("No code provided.");
+
             }
 
             if (!code.StartsWith("ac_", StringComparison.Ordinal))
             {
+
                 throw new InvalidOperationException("Invalid account code format.");
+
             }
 
             return await AppStorage.GetOrCreateStripeInfo(code, async () =>

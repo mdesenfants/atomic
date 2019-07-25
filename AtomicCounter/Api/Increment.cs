@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,8 +20,12 @@ namespace AtomicCounter.Api
             string counter,
             ILogger log)
         {
+            if (req == null)
+            {
+                throw new ArgumentNullException(nameof(req));
+            }
             log.LogInformation($"Incrementing {counter}.");
-            var count = GetCount(req);
+            long count = GetCount(req);
 
             return await AuthProvider.AuthorizeAppAndExecute(
                 req,

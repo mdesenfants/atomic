@@ -112,7 +112,7 @@ class App extends React.Component<{}, IAppState> {
                 <div className="container">
                     <CssBaseline />
 
-                    <Grid container={true} spacing={9}>
+                    <Grid container={true} spacing={8}>
                         <Grid item={true} xs={3}>
                             <Typography variant="h6">Counters</Typography>
                             <TextField

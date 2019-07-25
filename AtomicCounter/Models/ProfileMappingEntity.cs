@@ -10,6 +10,11 @@ namespace AtomicCounter.Models
             get => $"{PartitionKey}|{RowKey}";
             set
             {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    throw new ArgumentException("Sid must be a valid profile identifier.");
+                }
+
                 var pipe = value.IndexOf('|');
                 var provider = value.Substring(0, pipe);
                 var id = value.Substring(pipe + 1, value.Length - pipe - 1);

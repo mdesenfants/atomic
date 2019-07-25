@@ -17,6 +17,11 @@ namespace AtomicCounter.Timers
             ILogger log,
             CancellationToken token)
         {
+            if (timer == null)
+            {
+                throw new ArgumentNullException(nameof(timer));
+            }
+
             log.LogInformation($"Retrying poison items at {DateTime.Now}. Timer is {(timer.IsPastDue ? "past due" : "on time")}.");
 
             AppStorage.CreateAppStorage();

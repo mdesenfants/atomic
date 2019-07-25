@@ -15,7 +15,7 @@ namespace AtomicCounter.Timers
         public static async Task Run([TimerTrigger("0 5 */1 * * *")]TimerInfo timer, ILogger log)
         {
             log.LogInformation($"Generating invoices starting at: {DateTime.Now}");
-            log.LogInformation(timer.ToString());
+            log.LogInformation(timer?.ToString());
 
             var container = AppStorage.GetCounterMetadataContainer();
 

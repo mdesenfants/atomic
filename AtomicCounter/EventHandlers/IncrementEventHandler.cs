@@ -2,6 +2,7 @@ using AtomicCounter.Models.Events;
 using AtomicCounter.Services;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 
 namespace AtomicCounter.EventHandlers
@@ -13,6 +14,11 @@ namespace AtomicCounter.EventHandlers
             [QueueTrigger(AppStorage.CountQueueName, Connection = "AzureWebJobsStorage")]IncrementEvent increment,
             ILogger log)
         {
+            if (increment == null)
+            {
+                throw new ArgumentNullException(nameof(increment));
+            }
+
             log.LogInformation($"Handling: {increment}");
             var counter = new CountStorage(increment.Counter, log);
             try

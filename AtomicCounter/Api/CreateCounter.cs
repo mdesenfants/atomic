@@ -20,7 +20,9 @@ namespace AtomicCounter.Api
             string counter,
             ILogger log)
         {
+
             log.LogInformation("Creating counter {0}", counter);
+
 
             return await AuthProvider.AuthorizeUserAndExecute(
                 req,
