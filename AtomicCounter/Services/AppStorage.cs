@@ -19,16 +19,57 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
-    public static class AppStorage
+    public abstract class AppStorage
     {
         public const string CountQueueName = "increment-items";
         public const string ResetEventsQueueName = "reset-events";
         public const string RecreateEventsQueueName = "recreate-events";
-        public const string PriceChangeEventsQueueName = "price-change-events";
         public const string InvoicRequestEventsQueueName = "invoice-request-events";
-        public const string ProfilesKey = "profiles";
         public const string StripesKey = "stripes";
         public const string CountersKey = "counters";
+
+        private static CloudBlobClient blobClient;
+        private static CloudQueueClient queueClient;
+        private static CloudTableClient tableClient;
+
+        protected static CloudBlobClient Blobs
+        {
+            get
+            {
+                if (blobClient == null)
+                {
+                    blobClient = Storage.CreateCloudBlobClient();
+                }
+
+                return blobClient;
+            }
+        }
+
+        protected static CloudQueueClient Queues
+        {
+            get
+            {
+                if (queueClient == null)
+                {
+                    queueClient = Storage.CreateCloudQueueClient();
+                }
+
+                return queueClient;
+            }
+        }
+
+        protected static CloudTableClient Tables
+        {
+            get
+            {
+                if (tableClient == null)
+                {
+                    tableClient = Storage.CreateCloudTableClient();
+                }
+
+                return tableClient;
+            }
+        }
 
         private static readonly SHA256 Hasher = SHA256.Create();
 
@@ -48,24 +89,21 @@ namespace AtomicCounter.Services
 
         public static async Task SendDeleteEventAsync(string counter)
         {
-            var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(ResetEventsQueueName);
+            var queue = Queues.GetQueueReference(ResetEventsQueueName);
             var message = new CloudQueueMessage(counter);
             await queue.AddMessageAsync(message).ConfigureAwait(false);
         }
 
         public static async Task SendRecreateEventAsync(string counter)
         {
-            var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(RecreateEventsQueueName);
+            var queue = Queues.GetQueueReference(RecreateEventsQueueName);
             var message = new CloudQueueMessage(counter);
             await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null).ConfigureAwait(false);
         }
 
         public static async Task SendInvoiceRequestEventAsync(string counter, DateTimeOffset min, DateTimeOffset max)
         {
-            var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(InvoicRequestEventsQueueName);
+            var queue = Queues.GetQueueReference(InvoicRequestEventsQueueName);
 
             var invoiceEvent = new InvoiceRequestEvent()
             {
@@ -80,9 +118,9 @@ namespace AtomicCounter.Services
 
         public static async Task<int> RetryPoisonIncrementEventsAsync(ILogger log, CancellationToken token)
         {
-            var queueClient = Storage.CreateCloudQueueClient();
-            var poison = queueClient.GetQueueReference(CountQueueName + "-poison");
-            var queue = queueClient.GetQueueReference(CountQueueName);
+            
+            var poison = Queues.GetQueueReference(CountQueueName + "-poison");
+            var queue = Queues.GetQueueReference(CountQueueName);
 
             log.LogInformation($"Transferring {poison.Name} to {queue.Name}.");
 
@@ -185,53 +223,6 @@ namespace AtomicCounter.Services
             return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CanonicalName, x)).ToArray();
         }
 
-        public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid, string token)
-        {
-            var tableClient = Storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(ProfilesKey);
-
-            var refEntity = new ProfileMappingEntity()
-            {
-                Sid = sid,
-                Token = token
-            };
-
-            var op = TableOperation.Retrieve<ProfileMappingEntity>(refEntity.PartitionKey, refEntity.RowKey);
-            var queryResult = await table.ExecuteAsync(op).ConfigureAwait(false);
-            var resEntity = (ProfileMappingEntity)queryResult?.Result;
-
-            if (resEntity == null)
-            {
-                // Create profile
-                var profile = new UserProfile();
-
-                await SaveUserProfileAsync(profile).ConfigureAwait(false);
-                refEntity.ProfileId = profile.Id;
-
-                await table.ExecuteAsync(TableOperation.Insert(refEntity)).ConfigureAwait(false);
-
-                return profile;
-            }
-            else
-            {
-                var blob = GetProfileContainer();
-                var block = blob.GetBlockBlobReference(resEntity.ProfileId.ToString());
-                return (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<UserProfile>();
-            }
-        }
-
-        public static async Task SaveUserProfileAsync(UserProfile profile)
-        {
-            if (profile == null)
-            {
-                throw new ArgumentNullException(nameof(profile));
-            }
-
-            var blob = GetProfileContainer();
-            var block = blob.GetBlockBlobReference(profile.Id.ToString());
-            await block.UploadTextAsync(profile.ToJson()).ConfigureAwait(false);
-        }
-
         public static async Task<OAuthToken> GetOrCreateStripeInfo(string code, Func<Task<OAuthToken>> tokenFactory)
         {
             if (tokenFactory == null)
@@ -257,74 +248,6 @@ namespace AtomicCounter.Services
             }
         }
 
-        public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
-        {
-            if (profile == null)
-            {
-                throw new ArgumentNullException(nameof(profile));
-            }
-
-            var canonicalName = counter.ToCanonicalName();
-            if (!CounterNameIsValid(canonicalName))
-            {
-                log.LogInformation($"Counter name '{counter}' was denied because its canonical form ('{canonicalName}') is invalid.");
-                throw new InvalidOperationException();
-            }
-
-            var blob = GetCounterMetadataContainer();
-            var block = blob.GetBlockBlobReference(canonicalName);
-
-            if (await block.ExistsAsync().ConfigureAwait(false))
-            {
-                var existing = (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<Counter>();
-                return existing.Profiles.Contains(profile.Id) ? existing : null;
-            }
-            else
-            {
-                var newCounter = new Counter() { CounterName = counter };
-                newCounter.Profiles.Add(profile.Id);
-
-                for (var i = 0; i < 2; i++)
-                {
-                    newCounter.ReadKeys.Add(RandomString());
-                }
-
-                for (var i = 0; i < 2; i++)
-                {
-                    newCounter.WriteKeys.Add(RandomString());
-                }
-
-                var client = new CountStorage(counter, log);
-                var table = client.GetCounterTable();
-                try
-                {
-                    var tasks = new[] {
-                        block.UploadTextAsync(newCounter.ToJson()),
-                        table.CreateIfNotExistsAsync(),
-                    };
-
-                    Task.WaitAll(tasks);
-
-                    profile.Counters.Add(newCounter.CounterName);
-                    await SaveUserProfileAsync(profile).ConfigureAwait(false);
-                }
-                catch
-                {
-                    log.LogError($"Could not create counter {counter}");
-                    var tasks = new[] {
-                        block.DeleteIfExistsAsync(),
-                        table.DeleteIfExistsAsync(),
-                    };
-
-                    await Task.Run(() => Task.WaitAll(tasks)).ConfigureAwait(false);
-
-                    throw;
-                }
-
-                return newCounter;
-            }
-        }
-
         public static async Task SaveInvoiceAsync(string counter, DateTimeOffset min, DateTimeOffset max, IEnumerable<ChargeGroup> invoice)
         {
             var blobClient = Storage.CreateCloudBlobClient();
@@ -334,7 +257,7 @@ namespace AtomicCounter.Services
             await blob.UploadTextAsync(invoice.ToJson()).ConfigureAwait(false);
         }
 
-        private static string RandomString()
+        protected static string RandomString()
         {
             const int strlen = 256;
             var builder = new StringBuilder(strlen);
@@ -399,12 +322,6 @@ namespace AtomicCounter.Services
             await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
         }
 
-        private static CloudBlobContainer GetProfileContainer()
-        {
-            var blobClient = Storage.CreateCloudBlobClient();
-            return blobClient.GetContainerReference(ProfilesKey);
-        }
-
         private static CloudBlobContainer GetStripeContainer()
         {
             var blobClient = Storage.CreateCloudBlobClient();
@@ -417,37 +334,7 @@ namespace AtomicCounter.Services
             return blobClient.GetContainerReference(CountersKey);
         }
 
-        public static void CreateAppStorage()
-        {
-            var tasks = new List<Task>();
-
-            var queueClient = Storage.CreateCloudQueueClient();
-            var queue = queueClient.GetQueueReference(CountQueueName);
-            tasks.Add(queue.CreateIfNotExistsAsync());
-
-            var resetQueue = queueClient.GetQueueReference(ResetEventsQueueName);
-            tasks.Add(resetQueue.CreateIfNotExistsAsync());
-
-            var createQueue = queueClient.GetQueueReference(RecreateEventsQueueName);
-            tasks.Add(createQueue.CreateIfNotExistsAsync());
-
-            var priceChangeQueue = queueClient.GetQueueReference(PriceChangeEventsQueueName);
-            tasks.Add(priceChangeQueue.CreateIfNotExistsAsync());
-
-            var tableClient = Storage.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(ProfilesKey);
-            tasks.Add(table.CreateIfNotExistsAsync());
-
-            var blobClient = Storage.CreateCloudBlobClient();
-            var counters = blobClient.GetContainerReference(CountersKey);
-            var profiles = blobClient.GetContainerReference(ProfilesKey);
-            var stripes = blobClient.GetContainerReference(StripesKey);
-            tasks.Add(counters.CreateIfNotExistsAsync());
-            tasks.Add(profiles.CreateIfNotExistsAsync());
-            tasks.Add(stripes.CreateIfNotExistsAsync());
-
-            Task.WaitAll(tasks.ToArray());
-        }
+        public abstract Task CreateStorage();
 
         public static readonly CloudStorageAccount Storage = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
     }

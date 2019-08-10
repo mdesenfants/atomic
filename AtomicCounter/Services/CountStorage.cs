@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AtomicCounter.Services
 {
-    public class CountStorage
+    public class CountStorage : AppStorage
     {
         private readonly string Counter;
         private readonly ILogger logger;
@@ -166,6 +166,80 @@ namespace AtomicCounter.Services
                 logger.LogWarning($"There was a problem counting {Counter} when getting invoice data.");
                 throw;
             }
+        }
+
+        public static async Task<Counter> GetOrCreateCounterAsync(UserProfile profile, string counter, ILogger log)
+        {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            var canonicalName = counter.ToCanonicalName();
+            if (!CounterNameIsValid(canonicalName))
+            {
+                log.LogInformation($"Counter name '{counter}' was denied because its canonical form ('{canonicalName}') is invalid.");
+                throw new InvalidOperationException();
+            }
+
+            var blob = GetCounterMetadataContainer();
+            var block = blob.GetBlockBlobReference(canonicalName);
+
+            if (await block.ExistsAsync().ConfigureAwait(false))
+            {
+                var existing = (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<Counter>();
+                return existing.Profiles.Contains(profile.Id) ? existing : null;
+            }
+            else
+            {
+                var newCounter = new Counter() { CounterName = counter };
+                newCounter.Profiles.Add(profile.Id);
+
+                for (var i = 0; i < 2; i++)
+                {
+                    newCounter.ReadKeys.Add(RandomString());
+                }
+
+                for (var i = 0; i < 2; i++)
+                {
+                    newCounter.WriteKeys.Add(RandomString());
+                }
+
+                var client = new CountStorage(counter, log);
+                var table = client.GetCounterTable();
+                try
+                {
+                    var tasks = new[] {
+                        block.UploadTextAsync(newCounter.ToJson()),
+                        table.CreateIfNotExistsAsync(),
+                    };
+
+                    Task.WaitAll(tasks);
+
+                    profile.Counters.Add(newCounter.CounterName);
+                    await ProfilesStorage.SaveUserProfileAsync(profile).ConfigureAwait(false);
+                }
+                catch
+                {
+                    log.LogError($"Could not create counter {counter}");
+                    var tasks = new[] {
+                        block.DeleteIfExistsAsync(),
+                        table.DeleteIfExistsAsync(),
+                    };
+
+                    await Task.Run(() => Task.WaitAll(tasks)).ConfigureAwait(false);
+
+                    throw;
+                }
+
+                return newCounter;
+            }
+        }
+
+        public override async Task CreateStorage()
+        {
+            var counters = Blobs.GetContainerReference(CountersKey);
+            await counters.CreateIfNotExistsAsync();
         }
     }
 

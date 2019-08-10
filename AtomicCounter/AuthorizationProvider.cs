@@ -85,7 +85,7 @@ namespace AtomicCounter
                 var userName = $"stripe|{authInfo.StripeUserId}";
 
 
-                UserProfile userProfile = await AppStorage.GetOrCreateUserProfileAsync(userName, authInfo.StripeUserId).ConfigureAwait(false);
+                UserProfile userProfile = await ProfilesStorage.GetOrCreateUserProfileAsync(userName, authInfo.StripeUserId).ConfigureAwait(false);
                 return await action(userProfile).ConfigureAwait(false);
             }
             catch (InvalidOperationException)

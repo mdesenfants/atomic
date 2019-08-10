@@ -24,7 +24,7 @@ namespace AtomicCounter.Timers
 
             log.LogInformation($"Retrying poison items at {DateTime.Now}. Timer is {(timer.IsPastDue ? "past due" : "on time")}.");
 
-            AppStorage.CreateAppStorage();
+            // AppStorage.CreateAppStorage();
 
             var total = await AppStorage.RetryPoisonIncrementEventsAsync(log, token).ConfigureAwait(false);
             
