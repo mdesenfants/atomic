@@ -44,10 +44,10 @@ namespace AtomicCounter.Test
             AppStorage.CreateAppStorage();
 
             // Add a counter
-            var counterViewModel = await AddCounter(mockAuth, req, logger).ConfigureAwait(false);
+            var counterViewModel = await AddCounter(mockAuth, req, logger);
 
             // Get existing counter
-            var getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel).ConfigureAwait(false);
+            var getCounterViewModel = await GetExistingCounter(mockAuth, req, logger, counterViewModel);
 
             // Create a counter client
             var increment = new IncrementMetadata()
@@ -62,77 +62,77 @@ namespace AtomicCounter.Test
             long totalIncrements = 0;
 
             // Increment counter
-            var transaction = await increment.Increment().ConfigureAwait(false);
+            var transaction = await increment.Increment();
             totalIncrements += transaction.inc;
             totalValue += transaction.val;
 
             // Handle count event
-            await HandleCountEvents(logger).ConfigureAwait(false);
+            await HandleCountEvents(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
-            await GetCount(mockAuth, req, logger, getCounterViewModel, totalIncrements, "First count.").ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, totalIncrements, "First count.");
 
             // Increment counter for client and time rnage
             var min = new DateTime(DateTime.UtcNow.Ticks, DateTimeKind.Utc);
 
-            transaction = await increment.Increment().ConfigureAwait(false);
+            transaction = await increment.Increment();
             totalIncrements += transaction.inc;
             totalValue += transaction.val;
 
-            await HandleCountEvents(logger).ConfigureAwait(false);
+            await HandleCountEvents(logger);
 
             var max = DateTimeOffset.UtcNow;
 
             // Check counts for different slices
-            await GetCount(mockAuth, req, logger, getCounterViewModel, transaction.inc, "Date count.", min: min, max: max).ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, transaction.inc, "Date count.", min: min, max: max);
 
             // Get the invoice for the last time slice
             var counterClient = new CountStorage(getCounterViewModel.CounterName, logger);
-            var invoice = await counterClient.GetInvoiceDataAsync(min, max).ConfigureAwait(false);
+            var invoice = await counterClient.GetInvoiceDataAsync(min, max);
             Assert.AreEqual(1, invoice.Count());
             var lines = invoice.First();
             Assert.AreEqual(2, lines.Quantity);
             Assert.AreEqual(0, lines.Price);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1
-            await GetCount(mockAuth, req, logger, getCounterViewModel, totalIncrements, "First count.").ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, totalIncrements, "First count.");
 
             // Rotate read keys
-            await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1).ConfigureAwait(false);
+            await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 1);
 
             // Rotate write keys
-            await RotateWriteKeys(mockAuth, req, logger, getCounterViewModel, 1).ConfigureAwait(false);
+            await RotateWriteKeys(mockAuth, req, logger, getCounterViewModel, 1);
 
             // Rotate read keys again
-            await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 0).ConfigureAwait(false);
+            await RotateReadKeys(mockAuth, req, logger, getCounterViewModel, 0);
 
             // Rotate write keys again
-            await RotateWriteKeys(mockAuth, req, logger, getCounterViewModel, 0).ConfigureAwait(false);
+            await RotateWriteKeys(mockAuth, req, logger, getCounterViewModel, 0);
 
             // Increment counter
-            transaction = await increment.Increment().ConfigureAwait(false);
+            transaction = await increment.Increment();
             totalIncrements += transaction.inc;
             totalValue += transaction.val;
 
             // Handle count event
-            await HandleCountEvents(logger).ConfigureAwait(false);
+            await HandleCountEvents(logger);
 
             // Get count (all but one key increments by 2, so result is (writeKeys * 2) - 1)
-            await GetCount(mockAuth, req, logger, getCounterViewModel, totalIncrements, "Count after rotation.").ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, totalIncrements, "Count after rotation.");
 
             // Should reset count to zero
-            await RunResetCounter(mockAuth, req, logger).ConfigureAwait(false);
+            await RunResetCounter(mockAuth, req, logger);
 
             // Makes sure counter was reset
 
-            await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.").ConfigureAwait(false);
+            await GetCount(mockAuth, req, logger, getCounterViewModel, 0, "Count after reset.");
 
         }
 
         private static async Task<CounterViewModel> AddCounter(Mock<IAuthorizationProvider> mockAuth, DefaultHttpRequest req, TestLogger logger)
         {
             CreateCounter.AuthProvider = mockAuth.Object;
-            var result = await CreateCounter.Run(req, Initialize.Counter, logger).ConfigureAwait(false);
+            var result = await CreateCounter.Run(req, Initialize.Counter, logger);
             var content = (OkObjectResult)result;
             var counterViewModel = (CounterViewModel)content.Value;
 
@@ -149,7 +149,7 @@ namespace AtomicCounter.Test
         {
             GetCounter.AuthProvider = mockAuth.Object;
             req.Method = "GET";
-            var getCounterResult = (OkObjectResult)await GetCounter.Run(req, Initialize.Counter, logger).ConfigureAwait(false);
+            var getCounterResult = (OkObjectResult)await GetCounter.Run(req, Initialize.Counter, logger);
             var getCounterViewModel = (CounterViewModel)getCounterResult.Value;
 
             Assert.IsNotNull(getCounterViewModel);
@@ -165,12 +165,12 @@ namespace AtomicCounter.Test
         {
             ResetCounter.AuthProvider = mockAuth.Object;
             req.Method = "DELETE";
-            var resetResult = (AcceptedResult)await ResetCounter.Run(req, Initialize.Counter, logger).ConfigureAwait(false);
+            var resetResult = (AcceptedResult)await ResetCounter.Run(req, Initialize.Counter, logger);
             Assert.IsNotNull(resetResult);
 
-            await ResetEventHandler.Run(Initialize.Counter, logger).ConfigureAwait(false);
+            await ResetEventHandler.Run(Initialize.Counter, logger);
 
-            await RecreateEventHandler.Run(Initialize.Counter, logger).ConfigureAwait(false);
+            await RecreateEventHandler.Run(Initialize.Counter, logger);
         }
 
         private static async Task GetCount(Mock<IAuthorizationProvider> mockAuth, HttpRequest req, TestLogger logger, CounterViewModel getCounterViewModel, long expected, string message, DateTimeOffset? min = null, DateTimeOffset? max = null)
@@ -185,7 +185,7 @@ namespace AtomicCounter.Test
                 query += max == null ? string.Empty : $"&max={Uri.EscapeDataString(max?.ToString("o", CultureInfo.InvariantCulture))}";
 
                 req.QueryString = new QueryString(query);
-                var countResult = (OkObjectResult)await Count.Run(req, Initialize.Counter, logger).ConfigureAwait(false);
+                var countResult = (OkObjectResult)await Count.Run(req, Initialize.Counter, logger);
                 var finalCount = (long)countResult.Value;
                 Assert.AreEqual(expected, finalCount, "Mismatch on iteration {0} with key {1}. {2}", iteration, key, message);
                 iteration++;
@@ -199,13 +199,13 @@ namespace AtomicCounter.Test
 
             do
             {
-                var countEvents = await queue.GetMessagesAsync(30).ConfigureAwait(false);
+                var countEvents = await queue.GetMessagesAsync(30);
                 if (countEvents == null || countEvents.Count() == 0) return;
 
                 foreach (var evt in countEvents)
                 {
-                    await IncrementEventHandler.Run(evt.AsString.FromJson<IncrementEvent>(), logger).ConfigureAwait(false);
-                    await queue.DeleteMessageAsync(evt).ConfigureAwait(false);
+                    await IncrementEventHandler.Run(evt.AsString.FromJson<IncrementEvent>(), logger);
+                    await queue.DeleteMessageAsync(evt);
                 }
             } while (true);
         }
@@ -214,7 +214,7 @@ namespace AtomicCounter.Test
         {
             RotateKeys.Authorization = mockAuth.Object;
             req.Method = "POST";
-            var readRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Counter, "read", logger).ConfigureAwait(false);
+            var readRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Counter, "read", logger);
             var readKeys = (string[])readRotateResult.Value;
             Assert.AreEqual(2, readKeys.Length);
             var readDupeCount = readKeys.Count(k => getCounterViewModel.ReadKeys.Contains(k));
@@ -225,7 +225,7 @@ namespace AtomicCounter.Test
         {
             RotateKeys.Authorization = mockAuth.Object;
             req.Method = "POST";
-            var writeRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Counter, "write", logger).ConfigureAwait(false);
+            var writeRotateResult = (OkObjectResult)await RotateKeys.Run(req, Initialize.Counter, "write", logger);
             var writeKeys = (string[])writeRotateResult.Value;
             Assert.AreEqual(2, writeKeys.Length);
             var writeDupeCount = writeKeys.Count(k => getCounterViewModel.WriteKeys.Contains(k));
@@ -295,7 +295,7 @@ namespace AtomicCounter.Test
                     modifier += value == 0 ? string.Empty : $"&value={value}";
 
                     Req.QueryString = new QueryString($"?key={key}{modifier}");
-                    var incrementResult = (AcceptedResult)await Api.Increment.Run(Req, Initialize.Counter, Logger).ConfigureAwait(false);
+                    var incrementResult = (AcceptedResult)await Api.Increment.Run(Req, Initialize.Counter, Logger);
                     Assert.IsNotNull(incrementResult);
                     increments++;
                     totalValue += value;

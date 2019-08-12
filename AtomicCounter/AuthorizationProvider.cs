@@ -33,7 +33,7 @@ namespace AtomicCounter
                     return new UnauthorizedResult();
                 }
 
-                var existing = await AppStorage.GetCounterMetadataAsync(counter).ConfigureAwait(false);
+                var existing = await AppStorage.GetCounterMetadataAsync(counter);
 
                 if (existing == null)
                 {
@@ -58,7 +58,7 @@ namespace AtomicCounter
                     return new UnauthorizedResult();
                 }
 
-                return await action().ConfigureAwait(false);
+                return await action();
             }
             catch (InvalidOperationException)
             {
@@ -81,12 +81,12 @@ namespace AtomicCounter
 
             try
             {
-                var authInfo = await (req?.GetAuthInfoAsync()).ConfigureAwait(false);
+                var authInfo = await (req?.GetAuthInfoAsync());
                 var userName = $"stripe|{authInfo.StripeUserId}";
 
 
-                UserProfile userProfile = await ProfilesStorage.GetOrCreateUserProfileAsync(userName, authInfo.StripeUserId).ConfigureAwait(false);
-                return await action(userProfile).ConfigureAwait(false);
+                UserProfile userProfile = await ProfilesStorage.GetOrCreateUserProfileAsync(userName, authInfo.StripeUserId);
+                return await action(userProfile);
             }
             catch (InvalidOperationException)
             {
@@ -111,7 +111,7 @@ namespace AtomicCounter
                 return await AuthorizeUserAndExecute(req, async profile =>
                 {
                     // Throw unauthorized exception here when necessary
-                    var meta = await AppStorage.GetCounterMetadataAsync(profile, counter).ConfigureAwait(false);
+                    var meta = await AppStorage.GetCounterMetadataAsync(profile, counter);
 
                     if (meta == null)
                     {
@@ -119,8 +119,8 @@ namespace AtomicCounter
                     }
 
                     // Continue with action
-                    return await action(profile, meta).ConfigureAwait(false);
-                }).ConfigureAwait(false);
+                    return await action(profile, meta);
+                });
             }
             catch (InvalidOperationException)
             {

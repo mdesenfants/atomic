@@ -7,7 +7,7 @@ namespace AtomicCounter.Services
         public override async Task CreateStorage()
         {
             var stripes = Blobs.GetContainerReference(StripesKey);
-            await stripes.CreateIfNotExistsAsync().ConfigureAwait(false);
+            await stripes.CreateIfNotExistsAsync();
         }
     }
 }

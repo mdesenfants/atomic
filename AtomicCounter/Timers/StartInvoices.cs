@@ -22,12 +22,12 @@ namespace AtomicCounter.Timers
             BlobContinuationToken token = null;
             do
             {
-                var segment = await container.ListBlobsSegmentedAsync(token).ConfigureAwait(false);
+                var segment = await container.ListBlobsSegmentedAsync(token);
                 token = segment.ContinuationToken;
 
                 foreach (var record in segment.Results.OfType<CloudBlockBlob>())
                 {
-                    var counter = await AppStorage.GetCounterMetadataAsync(record.Name).ConfigureAwait(false);
+                    var counter = await AppStorage.GetCounterMetadataAsync(record.Name);
 
                     if (counter.InvoiceFrequency == InvoiceFrequency.Never ||
                         counter.NextInvoiceRun > DateTimeOffset.Now)
@@ -35,7 +35,7 @@ namespace AtomicCounter.Timers
                         return;
                     }
 
-                    await AppStorage.SendInvoiceRequestEventAsync(counter.CounterName, counter.LastInvoiceRun, counter.NextInvoiceRun).ConfigureAwait(false);
+                    await AppStorage.SendInvoiceRequestEventAsync(counter.CounterName, counter.LastInvoiceRun, counter.NextInvoiceRun);
                 }
             } while (token != null);
         }

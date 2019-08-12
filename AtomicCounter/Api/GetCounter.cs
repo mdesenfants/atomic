@@ -24,7 +24,7 @@ namespace AtomicCounter.Api
             log.LogInformation("Getting info for counter {0}", counter);
 
 
-            return await AuthProvider.AuthorizeUserAndExecute(req, counter, GetViewModel).ConfigureAwait(false);
+            return await AuthProvider.AuthorizeUserAndExecute(req, counter, GetViewModel);
         }
 
         private static async Task<IActionResult> GetViewModel(UserProfile profile, Counter existing)
@@ -36,7 +36,7 @@ namespace AtomicCounter.Api
                     .Select(x => AuthorizationHelpers.CombineAndHash(existing.CanonicalName, x)),
                 WriteKeys = existing.WriteKeys
                     .Select(x => AuthorizationHelpers.CombineAndHash(existing.CanonicalName, x))
-            })).ConfigureAwait(false);
+            }));
         }
     }
 }

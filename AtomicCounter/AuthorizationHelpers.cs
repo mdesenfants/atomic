@@ -76,8 +76,8 @@ namespace AtomicCounter
                     ClientSecret = Environment.GetEnvironmentVariable(StripeSecretSetting),
                     Code = code,
                     GrantType = "authorization_code"
-                }).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                });
+            });
         }
 
         private static string GetAuthToken(this HttpRequest req)

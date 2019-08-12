@@ -24,9 +24,9 @@ namespace AtomicCounter.Api
 
             return await Authorization.AuthorizeUserAndExecute(req, counter, async (user, meta) =>
             {
-                var result = await AppStorage.RotateKeysAsync(meta, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true)).ConfigureAwait(false);
+                var result = await AppStorage.RotateKeysAsync(meta, (KeyMode)Enum.Parse(typeof(KeyMode), readorwrite, true));
                 return new OkObjectResult(result);
-            }).ConfigureAwait(false);
+            });
         }
     }
 }

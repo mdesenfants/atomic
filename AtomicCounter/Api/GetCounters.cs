@@ -21,8 +21,8 @@ namespace AtomicCounter.Api
 
 
             return await AuthProvider.AuthorizeUserAndExecute(req, async profile =>
-                await Task.FromResult(new OkObjectResult(profile.Counters)).ConfigureAwait(false)
-            ).ConfigureAwait(false);
+                await Task.FromResult(new OkObjectResult(profile.Counters))
+            );
         }
     }
 }

@@ -77,28 +77,28 @@ namespace AtomicCounter.Services
         {
             var counterClient = new CountStorage(counter, logger);
             var table = counterClient.GetCounterTable();
-            await table.DeleteIfExistsAsync().ConfigureAwait(false);
+            await table.DeleteIfExistsAsync();
         }
 
         public static async Task RecreateCounterAsync(string counter, ILogger logger)
         {
             var counterClient = new CountStorage(counter, logger);
             var table = counterClient.GetCounterTable();
-            await table.CreateIfNotExistsAsync().ConfigureAwait(false);
+            await table.CreateIfNotExistsAsync();
         }
 
         public static async Task SendDeleteEventAsync(string counter)
         {
             var queue = Queues.GetQueueReference(ResetEventsQueueName);
             var message = new CloudQueueMessage(counter);
-            await queue.AddMessageAsync(message).ConfigureAwait(false);
+            await queue.AddMessageAsync(message);
         }
 
         public static async Task SendRecreateEventAsync(string counter)
         {
             var queue = Queues.GetQueueReference(RecreateEventsQueueName);
             var message = new CloudQueueMessage(counter);
-            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null).ConfigureAwait(false);
+            await queue.AddMessageAsync(message, null, TimeSpan.FromMinutes(1), null, null);
         }
 
         public static async Task SendInvoiceRequestEventAsync(string counter, DateTimeOffset min, DateTimeOffset max)
@@ -113,7 +113,7 @@ namespace AtomicCounter.Services
             };
 
             var message = new CloudQueueMessage(invoiceEvent.ToJson());
-            await queue.AddMessageAsync(message).ConfigureAwait(false);
+            await queue.AddMessageAsync(message);
         }
 
         public static async Task<int> RetryPoisonIncrementEventsAsync(ILogger log, CancellationToken token)
@@ -125,7 +125,7 @@ namespace AtomicCounter.Services
             log.LogInformation($"Transferring {poison.Name} to {queue.Name}.");
 
             var retval = 0;
-            if (await poison.ExistsAsync().ConfigureAwait(false))
+            if (await poison.ExistsAsync())
             {
 
                 log.LogInformation("Found poison queue.");
@@ -148,8 +148,8 @@ namespace AtomicCounter.Services
                 log.LogInformation($"Grabbing maximum {countSettingValue} poinson items per batch.");
                 while (canContinue())
                 {
-                    var messages = await poison.GetMessagesAsync(countSettingValue).ConfigureAwait(false);
-                    if (messages.Count() == 0)
+                    var messages = await poison.GetMessagesAsync(countSettingValue);
+                    if (!messages.Any())
                     {
                         break;
                     }
@@ -162,8 +162,8 @@ namespace AtomicCounter.Services
                         }
 
                         retval++;
-                        await poison.DeleteMessageAsync(message).ConfigureAwait(false);
-                        await queue.AddMessageAsync(message).ConfigureAwait(false);
+                        await poison.DeleteMessageAsync(message);
+                        await queue.AddMessageAsync(message);
                     }
                 }
             }
@@ -218,7 +218,7 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CanonicalName);
 
-            await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
+            await block.UploadTextAsync(counter.ToJson());
 
             return keys.Select(x => AuthorizationHelpers.CombineAndHash(counter.CanonicalName, x)).ToArray();
         }
@@ -235,15 +235,15 @@ namespace AtomicCounter.Services
             var hashed = Base64UrlEncoder.Encode(Hasher.ComputeHash(Encoding.UTF8.GetBytes(code)));
             var block = blob.GetBlockBlobReference(hashed);
 
-            if (await block.ExistsAsync().ConfigureAwait(false))
+            if (await block.ExistsAsync())
             {
-                var data = await block.DownloadTextAsync().ConfigureAwait(false);
+                var data = await block.DownloadTextAsync();
                 return JsonConvert.DeserializeObject<OAuthToken>(data);
             }
             else
             {
-                var data = await tokenFactory().ConfigureAwait(false);
-                await block.UploadTextAsync(JsonConvert.SerializeObject(data)).ConfigureAwait(false);
+                var data = await tokenFactory();
+                await block.UploadTextAsync(JsonConvert.SerializeObject(data));
                 return data;
             }
         }
@@ -254,7 +254,7 @@ namespace AtomicCounter.Services
             var container = blobClient.GetContainerReference($"{counter}");
             var ranges = Uri.EscapeDataString(min.ToString("o", CultureInfo.InvariantCulture)) + "-" + Uri.EscapeDataString(max.ToString("o", CultureInfo.InvariantCulture)) + ".json";
             var blob = container.GetBlockBlobReference(ranges);
-            await blob.UploadTextAsync(invoice.ToJson()).ConfigureAwait(false);
+            await blob.UploadTextAsync(invoice.ToJson());
         }
 
         protected static string RandomString()
@@ -283,7 +283,7 @@ namespace AtomicCounter.Services
                 throw new ArgumentNullException(nameof(profile));
             }
 
-            var existing = await GetCounterMetadataAsync(counter.ToCanonicalName()).ConfigureAwait(false);
+            var existing = await GetCounterMetadataAsync(counter.ToCanonicalName());
 
             if (existing == null)
             {
@@ -302,9 +302,9 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.ToCanonicalName());
 
-            if (await block.ExistsAsync().ConfigureAwait(false))
+            if (await block.ExistsAsync())
             {
-                return (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<Counter>();
+                return (await block.DownloadTextAsync()).FromJson<Counter>();
             }
 
             return null;
@@ -319,7 +319,7 @@ namespace AtomicCounter.Services
 
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(counter.CanonicalName);
-            await block.UploadTextAsync(counter.ToJson()).ConfigureAwait(false);
+            await block.UploadTextAsync(counter.ToJson());
         }
 
         private static CloudBlobContainer GetStripeContainer()

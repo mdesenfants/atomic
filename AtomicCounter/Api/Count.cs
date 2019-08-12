@@ -61,15 +61,15 @@ namespace AtomicCounter.Api
 
                 if (min != DateTimeOffset.MinValue || max != DateTimeOffset.MaxValue)
                 {
-                    result = await storage.CountAsync(min, max).ConfigureAwait(false);
+                    result = await storage.CountAsync(min, max);
                 }
                 else
                 {
-                    result = await storage.CountAsync().ConfigureAwait(false);
+                    result = await storage.CountAsync();
                 }
 
                 return new OkObjectResult(result);
-            }).ConfigureAwait(false);
+            });
         }
     }
 }

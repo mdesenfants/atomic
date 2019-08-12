@@ -26,9 +26,9 @@ namespace AtomicCounter.Api
                 async (profile, meta) =>
                 {
                     // Send reset event
-                    await AppStorage.SendDeleteEventAsync(counter).ConfigureAwait(false);
+                    await AppStorage.SendDeleteEventAsync(counter);
                     return new AcceptedResult();
-                }).ConfigureAwait(false);
+                });
         }
     }
 }

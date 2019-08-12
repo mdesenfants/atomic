@@ -7,7 +7,7 @@ namespace AtomicCounter.Services
         public override async Task CreateStorage()
         {
             var queue = Queues.GetQueueReference(CountQueueName);
-            await queue.CreateIfNotExistsAsync().ConfigureAwait(false);
+            await queue.CreateIfNotExistsAsync();
         }
     }
 }

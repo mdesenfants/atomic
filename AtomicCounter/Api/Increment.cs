@@ -46,10 +46,10 @@ namespace AtomicCounter.Api
                     _ = decimal.TryParse(valueParam, out decimal value);
 
 
-                    await cs.SendIncrementEventAsync(increment, value).ConfigureAwait(false);
+                    await cs.SendIncrementEventAsync(increment, value);
 
                     return new AcceptedResult();
-                }).ConfigureAwait(false);
+                });
         }
 
         private static long GetCount(HttpRequest req)

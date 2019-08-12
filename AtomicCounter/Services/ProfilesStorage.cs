@@ -14,7 +14,7 @@ namespace AtomicCounter.Services
         {
             var tableClient = AppStorage.Storage.CreateCloudTableClient();
             var table = tableClient.GetTableReference(ProfilesKey);
-            await table.CreateIfNotExistsAsync().ConfigureAwait(false);
+            await table.CreateIfNotExistsAsync();
 
             var profiles = Blobs.GetContainerReference(ProfilesKey);
             await profiles.CreateIfNotExistsAsync();
@@ -35,7 +35,7 @@ namespace AtomicCounter.Services
 
             var blob = GetProfileContainer();
             var block = blob.GetBlockBlobReference(profile.Id.ToString());
-            await block.UploadTextAsync(profile.ToJson()).ConfigureAwait(false);
+            await block.UploadTextAsync(profile.ToJson());
         }
 
         public static async Task<UserProfile> GetOrCreateUserProfileAsync(string sid, string token)
@@ -50,7 +50,7 @@ namespace AtomicCounter.Services
             };
 
             var op = TableOperation.Retrieve<ProfileMappingEntity>(refEntity.PartitionKey, refEntity.RowKey);
-            var queryResult = await table.ExecuteAsync(op).ConfigureAwait(false);
+            var queryResult = await table.ExecuteAsync(op);
             var resEntity = (ProfileMappingEntity)queryResult?.Result;
 
             if (resEntity == null)
@@ -58,10 +58,10 @@ namespace AtomicCounter.Services
                 // Create profile
                 var profile = new UserProfile();
 
-                await SaveUserProfileAsync(profile).ConfigureAwait(false);
+                await SaveUserProfileAsync(profile);
                 refEntity.ProfileId = profile.Id;
 
-                await table.ExecuteAsync(TableOperation.Insert(refEntity)).ConfigureAwait(false);
+                await table.ExecuteAsync(TableOperation.Insert(refEntity));
 
                 return profile;
             }
@@ -69,7 +69,7 @@ namespace AtomicCounter.Services
             {
                 var blob = GetProfileContainer();
                 var block = blob.GetBlockBlobReference(resEntity.ProfileId.ToString());
-                return (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<UserProfile>();
+                return (await block.DownloadTextAsync()).FromJson<UserProfile>();
             }
         }
     }

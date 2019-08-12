@@ -26,7 +26,7 @@ namespace AtomicCounter.Timers
 
             // AppStorage.CreateAppStorage();
 
-            var total = await AppStorage.RetryPoisonIncrementEventsAsync(log, token).ConfigureAwait(false);
+            var total = await AppStorage.RetryPoisonIncrementEventsAsync(log, token);
             
             log.LogInformation($"Resubmitted {total} increment operations from poison queue.");
         }

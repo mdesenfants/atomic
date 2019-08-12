@@ -35,7 +35,7 @@ namespace AtomicCounter.Services
                 Value = value
             }.ToJson());
 
-            await queue.AddMessageAsync(message).ConfigureAwait(false);
+            await queue.AddMessageAsync(message);
         }
 
         public static string Tableize(string input)
@@ -72,7 +72,7 @@ namespace AtomicCounter.Services
                 Value = value
             });
 
-            await table.ExecuteAsync(insert).ConfigureAwait(false);
+            await table.ExecuteAsync(insert);
         }
 
         public async Task<long> CountAsync(Func<CountEntity, bool> conditions = null)
@@ -92,7 +92,7 @@ namespace AtomicCounter.Services
             TableContinuationToken token = null;
             do
             {
-                var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token).ConfigureAwait(false);
+                var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
                 token = resultSegment.ContinuationToken;
 
                 if (conditions != null)
@@ -110,7 +110,7 @@ namespace AtomicCounter.Services
 
         public async Task<long> CountAsync(DateTimeOffset min, DateTimeOffset max)
         {
-            return await CountAsync(x => DateInRange(x.Timestamp, min, max)).ConfigureAwait(false);
+            return await CountAsync(x => DateInRange(x.Timestamp, min, max));
         }
 
         private static bool DateInRange(DateTimeOffset? timestamp, DateTimeOffset min, DateTimeOffset max)
@@ -131,7 +131,7 @@ namespace AtomicCounter.Services
                     return new List<ChargeGroup>();
                 }
 
-                var meta = await AppStorage.GetCounterMetadataAsync(Counter).ConfigureAwait(false);
+                var meta = await AppStorage.GetCounterMetadataAsync(Counter);
 
                 var query = new TableQuery<CountEntity>()
                     .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, CountPartition));
@@ -144,7 +144,7 @@ namespace AtomicCounter.Services
 
                 do
                 {
-                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token).ConfigureAwait(false);
+                    var resultSegment = await table.ExecuteQuerySegmentedAsync(query, token);
                     var filtered = resultSegment.Where(r => DateInRange(r.Timestamp, min, max));
 
                     foreach (var item in filtered)
@@ -185,9 +185,9 @@ namespace AtomicCounter.Services
             var blob = GetCounterMetadataContainer();
             var block = blob.GetBlockBlobReference(canonicalName);
 
-            if (await block.ExistsAsync().ConfigureAwait(false))
+            if (await block.ExistsAsync())
             {
-                var existing = (await block.DownloadTextAsync().ConfigureAwait(false)).FromJson<Counter>();
+                var existing = (await block.DownloadTextAsync()).FromJson<Counter>();
                 return existing.Profiles.Contains(profile.Id) ? existing : null;
             }
             else
@@ -217,7 +217,7 @@ namespace AtomicCounter.Services
                     Task.WaitAll(tasks);
 
                     profile.Counters.Add(newCounter.CounterName);
-                    await ProfilesStorage.SaveUserProfileAsync(profile).ConfigureAwait(false);
+                    await ProfilesStorage.SaveUserProfileAsync(profile);
                 }
                 catch
                 {
@@ -227,7 +227,7 @@ namespace AtomicCounter.Services
                         table.DeleteIfExistsAsync(),
                     };
 
-                    await Task.Run(() => Task.WaitAll(tasks)).ConfigureAwait(false);
+                    await Task.Run(() => Task.WaitAll(tasks));
 
                     throw;
                 }
